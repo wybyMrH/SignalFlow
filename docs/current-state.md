@@ -1,13 +1,13 @@
 # 当前状态记录
 
-文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证）
+文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架）
 
 ## 评审范围
 
 - 需求或任务：在 E:\code\interview\SignalFlow 搭建 SignalFlow 客户反馈决策工具的工程骨架（已完成）；随后按用户要求进入**前端阶段——用模拟数据把前端从入口按业务需求与功能切片推进，先以文档落盘计划/需求/技术参考，再实现可演示闭环**（本记录当前聚焦前端阶段）。
 - 评审日期：2026-10-14
 - 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据。
-- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证；尚未接入真实渠道与 LLM 密钥（mock 模式下前端不依赖后端服务）。
+- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供）。
 
 ## 骨架阶段已关闭项（沿用首次评审）
 
@@ -33,6 +33,18 @@
 | F-6 | 前端全流程验证与 Docker 展示 | `frontend` 构建 + `deploy/docker-compose.yml` | 已实现 | `npm run build` 通过；docker compose 启动前端展示容器（默认 mock 模式），http://localhost:8090 可访问；nginx 已用变量化 upstream + Docker DNS resolver 修复 backend 未启动时独立展示 | 动态（容器内走查通过，见下节） | 交付演示 | 保持 | 已关闭 |
 | F-7 | 颜色/排版全屏回归与容器内全流程闭环 | 全站 7 页面 + 容器版本 | 已实现 | 近全屏 1846/1854px 视口下 6 主页面无横向溢出；容器内 FS-0→FS-7 全流程走查通过 | 动态（浏览器验收） | 交付演示 | 保持 | 已关闭 |
 
+## AI 功能阶段当前项
+
+| ID | 需求或契约点 | 文件/模块/边界 | 分类 | 观察行为 | 证据等级 | 影响 | 建议处理 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A-1 | AI 原生界面参考调研与设计选型 | `docs/frontend-development-plan.md`（AI 原生界面参考章节） | 已实现 | 研读 Ant Design X（RICH 范式：Bubble/Conversations/Prompts/Sender）、Page Assist（浏览器侧栏常驻聊天）、RuoYi AI（LangChain4j + RAG + 工作流编排）、OpenAI Intelligent UI（动态组合图表/按钮/表单）等开源项目，提取适用于政企 AI 工作台的布局模式与交互范式 | 静态（调研文档落盘） | 设计依据 | 供 A-2~A-4 沿用 | 已关闭 |
+| A-2 | AI 总览面板重构（AI Dashboard） | `frontend/src/pages/dashboard/DashboardPage.vue`、`frontend/src/components/ai/AIChatPanel.vue` | 已实现 | 打破传统 KPI 面板排版：顶部 KPI 指标条 + 左侧数据区（趋势图/双栏列表）+ 右侧 AI 助手对话面板 + 底部 AI 工作流状态与自动化规则区；对话面板支持预设工作语句（如「今天工单情况如何」）调用 mock 工作流汇总结果，也支持开放自由聊天 | 动态（浏览器验收 + type-check/build） | 核心 AI 入口 | 保持 | 已关闭 |
+| A-3 | AI 工作流状态与自动化规则面板 | `frontend/src/components/ai/AIWorkflowStatus.vue`、`AIAutomationRules.vue`、`frontend/src/stores/ai.ts` | 已实现 | 展示 AI 当前处理中的工作流/信息（按环节进度展示）；自动化区面向政企场景提供自动回复/自动分类/自动升级等预设规则配置开关 | 动态（浏览器验收） | 让 AI「可见可管」 | 保持 | 已关闭 |
+| A-4 | 反馈管理 AI 化（AI 生成回复/自动审批/气泡助手） | `frontend/src/pages/feedback/FeedbackListPage.vue`、`frontend/src/stores/feedback.ts`、`frontend/src/mocks/feedbackDb.ts`（F1061-F1064 AI 状态示例） | 已实现 | ① AI 生成回复：点击「AI 生成回复」基于 mock 政策知识库生成回复草稿，等待人工审批；② AI 自动审批：对重复/无用提问自动采用统一话术回复并标记「AI 自动审批」，支持人工一键采用或驳回；③ AI 气泡助手：悬浮气泡组件，点击后向 AI 提问（如「这个问题怎么回复」），根据知识库返回回复建议；④ 状态流转新增 `ai_reviewing`（AI审核中）/`ai_replied`（AI已回复） | 动态（浏览器验收 + 状态标签映射） | 反馈闭环 AI 化 | 保持 | 已关闭 |
+| A-5 | AI Mock 数据层与 API 适配 | `frontend/src/mocks/ai.ts`、`frontend/src/api/ai.ts`、`frontend/src/types/index.ts`（AIWorkflowStatus/AIAutomationRule/AIChatMessage） | 已实现 | mock 工作流/规则/对话数据与 `generateAIReply`/`getAIReplySuggestion`/`sendAIChat`/`getAIWelcomeMessage`；API 层 7 接口与后端契约对齐，`VITE_USE_MOCK` 可无缝切换真实后端 | 动态（type-check/build） | mock 先行切换桥梁 | 保持 | 已关闭 |
+| A-6 | AI Mock 后端工作流骨架 | `backend/app/schemas/ai.py`、`backend/app/services/ai.py`、`backend/app/api/v1/ai.py`、`backend/app/api/v1/router.py` | 已实现 | 后端 AI 路由契约：GET /api/v1/ai/workflows；GET /api/v1/ai/automation-rules；POST /api/v1/ai/chat；GET /api/v1/ai/chat/welcome；POST /api/v1/ai/reply-draft；POST /api/v1/ai/reply-suggestion；POST /api/v1/ai/auto-approve/{feedback_id}；AIService 提供 mock 实现（工作流/规则/对话/回复生成/建议/自动审批），预留真实 LLM 与知识库替换点 | 静态（契约文件 + 与前端 api/ai.ts 逐接口核对一致） | 后端 AI 接入点 | 下一阶段替换为真实 LiteLLM/知识库实现 | 已关闭 |
+| A-7 | AI 功能整体集成验证与容器部署 | `frontend` 构建 + `deploy/docker-compose.yml` | 已实现 | `npm run type-check` 通过（修复 SfIcon `message`→`chat` 类型错误）；`npm run build` 通过（1.35s）；Docker frontend 容器重建 healthy，最新 dist 部署至 http://localhost:8090 | 动态（type-check/build/容器走查） | 交付演示 | 保持 | 已关闭 |
+
 ## 动态验证证据（前端页面切片验收，2026-10-14）
 
 | 检查项 | 命令/方式 | 结果 |
@@ -49,6 +61,16 @@
 | 配色全屏走查 | 独立浏览器 1854×920（近全屏）逐页 | 总览/反馈/洞察/路线图/政务/设置 6 页均无横向溢出；body #f4f7fb、白侧栏、活跃项品牌蓝、内容区 1480px 居中、行高 1.6；深色切换正常 |
 | Docker 展示 | `docker compose up -d --no-deps frontend`（FRONTEND_PORT=8090） | 容器启动 http://localhost:8090 可访问，Mock 徽标显示，页面标题正常 |
 | 容器内全流程（FS-0→FS-7） | 浏览器打开容器展示实例 | FS-0 应用壳（6 导航/KPI 卡/图表）；FS-1 总览跳转洞察；FS-2 反馈筛选/详情抽屉/状态流转（新增→分析中）；FS-3 洞察证据链+四维评分；FS-4 路线图新建任务回写看板；FS-5 D3001 审批→回传→反馈页 F1055 显示「已回复/智能回传」；FS-6 政务适配 4 卡片；FS-7 设置渠道接入表 |
+| AI 整体类型检查 | `npm run type-check` | 通过（修复 SfIcon `name="message"` → `name="chat"` 的 IconName 联合类型错误，回归无新问题） |
+| AI 总览面板（A-2） | 浏览器打开 /dashboard | 顶部 KPI 指标条 + 左侧趋势图/双栏列表 + 右侧 AI 助手对话面板渲染正常；面板宽高比例合理、无超大字体/过度留白；AI 工作流状态卡片与自动化规则区位于面板底部，可读可切换 |
+| AI 对话（A-2） | AI 助手面板输入「今天工单情况如何」 | 预设语句调用 mock 工作流，返回按渠道聚合的工单汇总（示例：新工单量/趋势/高优先级提示）；自由聊天输入返回 AI 欢迎语与对话气泡，输入框 Sender/发送按钮交互正常 |
+| AI 工作流状态（A-3） | /dashboard 底部 AIWorkflowStatus | 展示当前运行中工作流（含环节/进度/状态标记），无空态渲染异常；规则卡片开关可切换，状态反馈即时 |
+| AI 生成回复（A-4） | 反馈列表选择一条新反馈 → AI 生成回复 | 生成回复草稿展示于 AI 操作区，来源标注「AI 草稿/依据 mock 知识库」，等待人工审批；再次生成可刷新草稿；清空草稿按钮生效 |
+| AI 自动审批（A-4） | 反馈列表执行 AI 自动审批 | 对命中重复/无用规则的单据生成统一话术回复并标记「AI自动审批」标签，状态流转为 `ai_replied`；人工可采用或驳回 |
+| AI 气泡助手（A-4） | 点击反馈列表右下角 AI 悬浮气泡 | 气泡展开对话面板，提问后返回基于 mock 知识库的回复建议，可「插入到回复」填充 AI 草稿区 |
+| AI 状态流转（A-4） | `frontend/src/mocks/feedbackDb.ts` F1061-F1064 | 4 条 AI 状态示例数据（ai_reviewing/ai_replied）在列表中正确显示「AI审核中」「AI已回复」标签，筛选 AI 状态可命中 |
+| AI 后端契约核对（A-6） | 前后端 7 接口逐项比对 | `frontend/src/api/ai.ts` 与 `backend/app/api/v1/ai.py` 的路径、方法、入参、出参完全一致；前端 `http.ts` baseURL `/api/v1` 与后端 router 前缀一致，`VITE_USE_MOCK=false` 可无缝切换 |
+| AI 容器部署（A-7） | `docker compose up -d --build --no-deps frontend`（FRONTEND_PORT=8090） | 容器重建 healthy，http://localhost:8090 可访问，最新 dist 已部署，AI 面板与反馈 AI 功能在容器内可操作 |
 
 ### 重要结论：草稿回传「未回写」疑点澄清
 
@@ -59,17 +81,17 @@
 
 ## 通俗语言发现
 
-1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；计划与规范必须落盘在项目内；配色要求淡色有活力、字号行距需适配完整屏幕。
-2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现，浏览器逐页验收通过（含筛选/分页/回写闭环/信号榜跳转/新建任务）；草稿回传「未回写」疑点已澄清为验收方式（整页导航重置 mock 内存态）所致，代码链路正确。
-3. **应该发生什么**：按用户最新反馈调整整体配色为淡色有活力风格，统一字体字号与行间距并适配全屏布局；随后 `npm run build` + Docker Desktop 启动展示；最后初始化 Git 推送私有仓库。
-4. **为什么差异重要**：规范先行避免页面开发偏离用户要求的紧凑与政务适配基调；mock 适配层保证后续接后端零改动；观感问题直接影响演示效果，需在容器化展示前收口。
-5. **证据与受影响边界**：全部 7 个页面交互闭环有浏览器证据；配色与排版适配尚未实施；Docker 启动效果待配色完成后验证。
-6. **建议的下一步（不声称已完成）**：实施配色与全屏排版适配（浅色有活力的 token 体系 + 字号行距 + 全屏布局），浏览器全屏验收后进入构建与 Docker 展示。
+1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手。
+2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；按用户要求完成 AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）；`npm run type-check` + `npm run build` 通过，Docker 容器重建 healthy。
+3. **应该发生什么**：AI 功能全部由 mock 数据与 mock 后端驱动，前端可独立演示（不依赖真实后端）；下一阶段（见 `docs/next-stage-plan.md`）将真实 LLM 接入与政务知识库对接，替换 mock 工作流实现。
+4. **为什么差异重要**：AI 参与的面板与反馈自动化为演示提供了「AI 原生」观感；mock 适配层保证后续接真实 LLM/知识库零改动；AI 状态标签与后端契约先行避免前后端联调返工。
+5. **证据与受影响边界**：全部 7 个页面交互闭环与 AI 面板/对话/工作流状态/自动化规则/回复生成/自动审批/气泡助手均有浏览器证据；type-check/build/容器部署通过；后端 AI 服务当前为 mock 实现，真实 LLM 与知识库接入未实施。
+6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流）与政务知识库对接（RAG 检索），替换 A-6 的 mock 服务实现；同时按用户指示将本阶段成果提交并推送至私有 GitHub 仓库。
 
 ## 评审覆盖与关闭标准
 
-- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收。
-- 未检查的文件或边界：配色与排版适配效果（全屏视口）、Docker 容器化启动效果——按计划在后续阶段验证。
+- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证。
+- 未检查的文件或边界：真实 LLM 接入与政务知识库对接（下一阶段）、后端 AI mock 服务在真实 FastAPI 运行时的手工 curl 验证（后端依赖未安装，契约以静态核对为准）。
 - 关闭前端规划项所需证据：切片实现完成后的浏览器可见验收（`docs/frontend-development-plan.md` §3.3）；文档本身的"已落盘"证据为文件存在与内容核对。
 - 最后检查版本或日期：2026-10-14。
 

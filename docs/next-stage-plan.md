@@ -1,49 +1,50 @@
 # 下一阶段计划
 
-文档就绪度：confirmed（上一阶段「前端 mock 全流程切片」已闭环，当前进入「仓库就绪 + 后端最小闭环」）
+文档就绪度：confirmed（上一阶段「前端 mock 全流程切片 + AI 总览/反馈 AI 化 + AI Mock 后端骨架」已闭环，当前进入「真实 LLM 接入与政务知识库对接」）
 
-## 上一阶段回执（2026-10-14 前端 mock 全流程切片）
+## 上一阶段回执（2026-10-14 前端 mock 全流程切片 + AI 功能）
 
 - **已完成**：FS-0 应用壳 → FS-1 总览 → FS-2 反馈管理 → FS-3 洞察 → FS-4/5 路线图（含草稿审批回传）→ FS-6 政务适配 → FS-7 设置，全部由 mock 数据驱动并逐页浏览器验收；配色已按用户反馈调整为淡色有活力风格（白侧栏 + 品牌蓝 + body #f4f7fb + 行高 1.6 + 内容区 1480px 居中 + 断点适配），近全屏 1854px 视口 6 个主页面均无横向溢出。
-- **验证证据**：`npm run type-check` 与 `npm run build`（vue-tsc + vite build）通过；Docker Desktop `docker compose up -d --no-deps frontend`（FRONTEND_PORT=8090）容器 healthy，http://localhost:8090 可访问；容器内 FS-0→FS-7 全流程走查通过（草稿回传使用 SPA 内导航，mock 内存态不回退）。
-- **文档**：详见 `docs/current-state.md` F-1~F-7 与 `docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`。
+- **AI 功能已完成（A-1~A-7）**：AI 总览面板重构（KPI + 数据区 + AI 对话面板 + 工作流状态 + 自动化规则）；反馈管理 AI 化（AI 生成回复草稿/等待人工审批、AI 自动审批统一话术回复并标记、AI 气泡助手、`ai_reviewing`/`ai_replied` 状态）；AI Mock 后端工作流骨架（`backend/app/{schemas,services,api/v1}/ai.py`，7 接口与前端 `api/ai.ts` 契约对齐，`VITE_USE_MOCK=false` 可无缝切换）。
+- **验证证据**：`npm run type-check`（修复 SfIcon `message`→`chat`）与 `npm run build`（vue-tsc + vite build，1.35s）通过；Docker Desktop `docker compose up -d --build --no-deps frontend`（FRONTEND_PORT=8090）容器 healthy，最新 dist 部署至 http://localhost:8090；AI 面板/对话/工作流状态/自动化规则/回复生成/自动审批/气泡助手逐项浏览器验收通过。
+- **文档**：详见 `docs/current-state.md` F-1~F-7 与 A-1~A-7、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`。
 
 ## 选定切片
 
-- 需求与可观察结果：**① 项目仓库就绪**——初始化 Git、加入 `.gitignore` 忽略规则、一次性初始提交，并按用户授权推送至私有 GitHub 仓库（不开源）；**② 后端最小闭环**——在现有后端骨架内实现反馈接收与持久化 API（POST /api/v1/feedback、GET /api/v1/feedback 分页/筛选），为前端 `VITE_USE_MOCK=false` 切换提供真实契约。
-- 当前行为 → 目标行为：前端可独立演示（mock 驱动，不依赖后端）；目标为反馈数据可经真实 API 写入与读取，前后端契约与 mock 适配层一致，Docker compose 中 frontend+backend 同时可访问。
-- 拥有边界、必要组件与排除项：`backend/app/api/`（反馈 CRUD + 内存/文件持久化）、`backend/app/schemas/`（Pydantic 契约）、`deploy/docker-compose.yml`（backend 服务编排）；排除真实 LLM 洞察、真实渠道接入、登录鉴权与数据库选型（先用轻量持久化，数据库迁移留待后续切片）。
-- 前置条件与交接契约：`frontend/src/types` 与后端 schema 字段对齐（feedback item、status 枚举等）；API 适配层保持 `VITE_USE_MOCK` 切换不受影响；`docs/frontend-development-plan.md` §3.3 验收口径沿用。
-- 为什么这是优先级与合适阶段大小：仓库就绪是后续一切提交与协作的前提；后端最小闭环是「真实数据切换」的必要前置，边界可独立验证（curl + 浏览器双通道）。
+- 需求与可观察结果：**① 真实 LLM 接入**——用 LiteLLM 统一网关接入可用大模型（本地/云端均可，先 mock-able 配置），替换 `backend/app/services/ai.py` 中 reply 生成与对话总结的 mock 实现为真实调用；**② 政务知识库对接**——建立 mock 本地政策知识库 + RAG 检索链路（向量化 + 检索 + 上下文注入），使 AI 回复/建议基于知识库内容生成并标注来源；**③ 前端演示开关**——`VITE_USE_MOCK=false` 时前端真实调用后端 AI 接口，Docker compose 中 frontend+backend 同时可访问。
+- 当前行为 → 目标行为：当前 AI 功能完全由前端 mock 与后端 mock 服务驱动；目标为同一套 UI/契约下由真实 LLM + 知识库检索生成回复与总结，产品可演示「AI 参与决策」的真实效果。
+- 拥有边界、必要组件与排除项：`backend/app/services/ai.py`（真实实现替换）、`backend/app/services/knowledge.py`（知识库检索 mock/RAG 骨架）、`backend/app/workflows/`（LangGraph 工作流编排）、`backend/pyproject.toml`（litellm/向量库依赖）；排除真实政务数据库对接（先以本地 mock 政策文档作为知识库源）、真实渠道接入、登录鉴权（仍以演示环境处理）。
+- 前置条件与交接契约：前端 `api/ai.ts` 与后端契约保持 A-6 已定义 7 接口不变；输出格式（回复文本/建议/来源标注）与前端 `types/index.ts` 对齐；`VITE_USE_MOCK` 切换文档沿用。
+- 为什么这是优先级与合适阶段大小：AI 是产品差异化的核心，真实 LLM + 知识库是「AI 参与面板」与「AI 自动回复」从演示走向可用的关键；边界可独立验证（curl 后端 AI 接口 + 前端真实数据渲染）。
 
 ## 验收与证据
 
-- 正常路径：`git status` 干净、`.gitignore` 生效（排除 dist/node_modules/.env 等）→ 推送私有仓库成功且远程可见；后端启动后 `curl -X POST /api/v1/feedback` 写入 1 条 → `GET /api/v1/feedback?status=new` 可读到；前端 `VITE_USE_MOCK=false` 且 backend 可用时，反馈页列表渲染真实返回数据。
-- 相关失败或取消：凭证缺失/网络不可达时停止并报告，不伪造推送成功；后端未启动时前端仍可回退 mock 演示，不白屏。
-- 重复、重试、重启、权限或恢复检查：后端重启后已写入数据仍在（轻量持久化）或按设计清空（内存态需明示）；推送前检查远程仓库存在性与权限。
-- 非专业人士可检查的证据：GitHub 私有仓库页面、curl 请求/响应样例、前端真实数据渲染截图。
-- 证据等级与限制：curl/浏览器真实可见；持久化方案若为内存态则在文档明示限制。
+- 正常路径：后端容器启动后 `curl -X POST /api/v1/ai/chat` 与 `curl -X POST /api/v1/ai/reply-draft` 返回真实生成内容（含知识库来源标注，若检索命中）；`GET /api/v1/ai/workflows` 返回真实执行状态；前端 `VITE_USE_MOCK=false` 且 backend 可用时，AI 对话与 AI 回复草稿渲染真实返回；知识库检索在无命中时给出明确「未检索到相关依据」降级文案。
+- 相关失败或取消：无可用 LLM 密钥/服务时停止并报告，不伪造生成结果；后端未启动时前端仍可回退 mock 演示，不白屏。
+- 重复、重试、重启、权限或恢复检查：LLM 调用失败重试策略（LiteLLM 重试/降级到 mock）；知识库索引重建后可再次检索；推送前检查远程仓库存在性与权限。
+- 非专业人士可检查的证据：curl 请求/响应样例（含真实生成文本）、前端 AI 对话与回复草稿真实渲染截图、知识库来源标注截图。
+- 证据等级与限制：curl/浏览器真实可见；生成内容质量依赖所选 LLM 能力，需人工抽查。
 
 ### 生成内容评估
 
-本切片无 LLM 生成内容；若后续 LangGraph 洞察接入产生生成文本，再启用模型评审流程。
+本切片将产生 LLM 生成文本（回复草稿/对话总结/建议），需启用模型评审流程：抽查生成内容与知识库依据的一致性、政企话术合规性、来源标注准确性；发现幻觉或越权内容时回退为 mock 或人工审批兜底（AI 自动审批仍保留人工可驳回入口）。
 
 ## 依赖与决策
 
-- 需要的用户决策：GitHub 仓库名与可见性已按用户指示（私有、不开源）执行；若远程仓库不存在，报告并请用户确认创建方式（gh 创建 / 用户手动创建后提供 URL）。
-- 技术调研或 ADR 前置：无新增前置；后端持久化选型（内存 vs 文件 vs SQLite）若需要可新增 ADR-0003 记录。
-- 安全、数据或迁移风险：`.gitignore` 必须覆盖 `.env`、密钥、dist、依赖目录与本地截图；mock 数据不包含真实客户信息；推送前复查无敏感文件入仓。
+- 需要的用户决策：LLM 供应来源（本地模型 / 云端 API / 暂用公开演示 key）与知识库源文档（是否提供真实政策文件，或继续使用 mock 政策文档）。
+- 技术调研或 ADR 前置：新增 ADR-0003 记录真实 LLM 接入与知识库选型（LiteLLM 网关 + 向量检索方案）；如引入新依赖需先验证可安装。
+- 安全、数据或迁移风险：LLM 与知识库内容涉及政务数据，只使用用户授权/公开文档；API key 写入环境变量（`.env`，不入库）；生成内容保留人工审批环节；推送前复查无敏感文件入仓。
 
 ## 完成与回退
 
-- 交付物与可观察结果：Git 仓库已初始化并推送私有仓库（远程可访问）；后端最小闭环 API 可 curl 验证；前端真实数据切换说明更新到 `docs/current-state.md`。
-- 判定切片完成的准则：Git 推送成功且 `git log` 可见初始提交；curl POST/GET 均返回 200 且数据一致；前端真实数据渲染验收通过。
-- 需替换或刷新的当前快照与回退界限：完成时更新 `docs/current-state.md`；回退界限为还原后端 API 新增模块与 Git 提交（不删除已完成前端切片）。
+- 交付物与可观察结果：后端 AI 服务真实实现可 curl 验证；知识库检索链路可用并返回来源；前端 `VITE_USE_MOCK=false` 真实调用渲染通过；文档更新到 `docs/current-state.md`。
+- 判定切片完成的准则：curl 两个以上 AI 接口返回真实生成内容；知识库命中/未命中两分支验证通过；前端真实数据渲染验收通过。
+- 需替换或刷新的当前快照与回退界限：完成时更新 `docs/current-state.md` 与 `docs/next-stage-plan.md`；回退界限为还原 `backend/app/services/ai.py` 至 mock 实现（前端与契约保持不动）。
 - 验证后需检查清理的一次性测试/运行产物：本地临时 curl 数据、dist 构建产物（按 `.gitignore` 策略）、docker 运行日志。
 
 ## 后续候选（仅候选，非承诺）
 
-- 真实数据端到端切换：反馈/洞察接口全量接通，前端删除/标签化 mock 分支。
-- 洞察与 LangGraph 接入：以真实工作流产物替换 mock 主题/优先级数据。
+- 真实政务数据端到端对接：工单/门户/评价等真实渠道数据入库，知识库替换为真实政策库。
+- 反馈分类模型与渠道接入：以真实数据训练/微调分类，替换 mock 主题/优先级数据。
 - 政务深化切片：FS-6 与后端政务功能组（诉求分级/督办/政策告知/审计）对接。
-- 反馈分类模型与渠道接入：工单/门户/评价等真实渠道数据入库。
+- 登录鉴权与多租户：演示环境收口为可交付内部试用版本。

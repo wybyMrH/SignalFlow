@@ -16,6 +16,8 @@ export const sourceLabels: Record<FeedbackSource, string> = {
 export const statusLabels: Record<FeedbackStatus, string> = {
   new: '新增',
   analyzing: '分析中',
+  ai_reviewing: 'AI审核中',
+  ai_replied: 'AI已回复',
   resolved: '已解决',
   replied: '已回复',
   closed: '已关闭',
@@ -24,6 +26,8 @@ export const statusLabels: Record<FeedbackStatus, string> = {
 export const statusTone: Record<FeedbackStatus, 'info' | 'warning' | 'success' | 'neutral' | 'muted'> = {
   new: 'info',
   analyzing: 'warning',
+  ai_reviewing: 'info',
+  ai_replied: 'success',
   resolved: 'success',
   replied: 'success',
   closed: 'muted',

@@ -80,7 +80,6 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-3);
-  max-width: 920px;
 }
 .card {
   background: var(--sf-surface);

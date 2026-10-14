@@ -33,6 +33,13 @@ export type IconName =
   | 'term'
   | 'shield'
   | 'link'
+  | 'magic'
+  | 'spinner'
+  | 'circle'
+  | 'label'
+  | 'chat'
+  | 'sentiment'
+  | 'checklist'
 </script>
 
 <template>
@@ -162,6 +169,39 @@ export type IconName =
     <template v-else-if="name === 'link'">
       <path d="M10 14a4.5 4.5 0 0 0 6.5.5l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.5 1.5" />
       <path d="M14 10a4.5 4.5 0 0 0-6.5-.5l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.5-1.5" />
+    </template>
+    <!-- 魔法/智能：AI 自动化 -->
+    <template v-else-if="name === 'magic'">
+      <path d="M12 2v4M12 18v4M2 12h4M18 12h4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+    </template>
+    <!-- 旋转/加载：工作流运行中 -->
+    <template v-else-if="name === 'spinner'">
+      <path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20" stroke-dasharray="32 16" />
+    </template>
+    <!-- 空心圆：占位 -->
+    <template v-else-if="name === 'circle'">
+      <circle cx="12" cy="12" r="9" />
+    </template>
+    <!-- 标签：自动分类 -->
+    <template v-else-if="name === 'label'">
+      <path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h6a1.5 1.5 0 0 1 1.1.5l5.4 5.4a1.5 1.5 0 0 1 0 2.2l-5.4 5.4a1.5 1.5 0 0 1-2.2 0l-5.4-5.4A1.5 1.5 0 0 1 4 11.5v-6Z" />
+      <circle cx="8" cy="8.5" r="1" fill="currentColor" stroke="none" />
+    </template>
+    <!-- 对话气泡：消息/回复 -->
+    <template v-else-if="name === 'chat'">
+      <path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v7a2.5 2.5 0 0 1-2.5 2.5H9l-4.2 3.4c-.6.5-1.5.1-1.5-.7V6.5Z" />
+      <path d="M8 9h8M8 12.5h5" />
+    </template>
+    <!-- 情感/心形：情感监测 -->
+    <template v-else-if="name === 'sentiment'">
+      <path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z" />
+      <path d="M9 10h.01M15 10h.01" />
+      <path d="M9.5 14.5a3.5 3.5 0 0 0 5 0" />
+    </template>
+    <!-- 清单：材料校验 -->
+    <template v-else-if="name === 'checklist'">
+      <path d="M4 6h16M4 12h16M4 18h10" />
+      <path d="M18 16l1.5 1.5L22 15" />
     </template>
   </svg>
 </template>

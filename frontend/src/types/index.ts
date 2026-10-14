@@ -7,8 +7,8 @@
 /** 反馈来源渠道 */
 export type FeedbackSource = 'ticket' | 'review' | 'interview' | 'sales' | 'hotline' | 'portal'
 
-/** 反馈状态（与后端枚举对齐） */
-export type FeedbackStatus = 'new' | 'analyzing' | 'resolved' | 'replied' | 'closed'
+/** 反馈状态（与后端枚举对齐；含 AI 扩展状态） */
+export type FeedbackStatus = 'new' | 'analyzing' | 'ai_reviewing' | 'ai_replied' | 'resolved' | 'replied' | 'closed'
 
 /** 情感倾向 */
 export type Sentiment = 'negative' | 'neutral' | 'positive'
@@ -267,4 +267,37 @@ export interface SettingsView {
   ai_note: string
   auth_note: string
   updated_at: string
+}
+
+/** AI 工作流运行状态 */
+export interface AIWorkflowStatus {
+  id: string
+  name: string
+  status: 'running' | 'completed' | 'failed' | 'queued'
+  progress: number
+  started_at: string
+  eta?: string
+  detail?: string
+}
+
+/** AI 自动化规则配置 */
+export interface AIAutomationRule {
+  id: string
+  name: string
+  description: string
+  enabled: boolean
+  scenario: string
+  icon: string
+  tone: 'primary' | 'success' | 'warning' | 'info' | 'danger'
+  stats?: string
+}
+
+/** AI 对话消息 */
+export interface AIChatMessage {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: string
+  workflow_refs?: string[]
+  sources?: string[]
 }

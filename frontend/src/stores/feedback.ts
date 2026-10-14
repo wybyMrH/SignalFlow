@@ -1,12 +1,14 @@
 import { reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
 
+import { autoApproveByAI, generateAIReplyDraft } from '@/api/ai'
 import { fetchFeedbackList, updateFeedbackStatus } from '@/api/feedback'
 import type { FeedbackListQuery, FeedbackStatus, FeedbackView } from '@/types'
 
 /**
  * 反馈管理状态（FS-2 数据层，mock 驱动）。
  * 查询条件与后端 GET /feedbacks 契约对齐；状态流转回写本地列表。
+ * AI 能力扩展：AI 生成回复草稿、AI 自动审批。
  */
 export const useFeedbackStore = defineStore('feedback', () => {
   const query = reactive<FeedbackListQuery>({
@@ -25,6 +27,11 @@ export const useFeedbackStore = defineStore('feedback', () => {
   /** 总览页待处理快捷列表（独立于查询条件，不影响反馈管理页筛选） */
   const pendingItems = ref<FeedbackView[]>([])
   const pendingLoading = ref(false)
+
+  /** AI 操作状态 */
+  const aiDraftLoading = ref<string | null>(null)
+  const aiApproveLoading = ref<string | null>(null)
+  const aiDrafts = ref<Record<string, string>>({})
 
   async function fetchPage() {
     loading.value = true
@@ -60,5 +67,40 @@ export const useFeedbackStore = defineStore('feedback', () => {
     if (p >= 0) pendingItems.value[p] = row
   }
 
-  return { query, items, total, loading, pendingItems, pendingLoading, fetchPage, fetchPending, setFilter, setStatus }
+  /** AI 生成回复草稿 */
+  async function generateReply(id: string, content: string) {
+    aiDraftLoading.value = id
+    try {
+      const draft = await generateAIReplyDraft(content)
+      aiDrafts.value[id] = draft
+      await setStatus(id, 'ai_reviewing', 'AI助手')
+    } finally {
+      aiDraftLoading.value = null
+    }
+  }
+
+  /** AI 自动审批：自动生成统一话术并标记 AI 已回复 */
+  async function autoApprove(id: string, content: string) {
+    aiApproveLoading.value = id
+    try {
+      const { reply, status } = await autoApproveByAI(id, content)
+      aiDrafts.value[id] = reply
+      await setStatus(id, status, 'AI自动审批')
+    } finally {
+      aiApproveLoading.value = null
+    }
+  }
+
+  /** 清除 AI 草稿 */
+  function clearDraft(id: string) {
+    delete aiDrafts.value[id]
+  }
+
+  return {
+    query, items, total, loading,
+    pendingItems, pendingLoading,
+    aiDraftLoading, aiApproveLoading, aiDrafts,
+    fetchPage, fetchPending, setFilter, setStatus,
+    generateReply, autoApprove, clearDraft,
+  }
 })

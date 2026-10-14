@@ -232,7 +232,7 @@ function select(id: string) {
   margin-bottom: var(--sf-space-3);
 }
 .score-total {
-  font-size: 28px;
+  font-size: var(--sf-font-24);
   font-weight: 700;
   color: var(--sf-primary);
 }

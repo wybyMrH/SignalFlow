@@ -13,6 +13,7 @@ import EmptyState from '@/components/common/EmptyState.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import { fetchAIReplySuggestion } from '@/api/ai'
 import { useFeedbackStore } from '@/stores/feedback'
 import type { FeedbackSource, FeedbackStatus, FeedbackView } from '@/types'
 import { formatDateTime } from '@/utils'
@@ -29,11 +30,19 @@ const filters = reactive<{ source: FeedbackSource | ''; status: FeedbackStatus |
 const drawerOpen = ref(false)
 const active = ref<FeedbackView | null>(null)
 
-/** 状态流转动作：当前状态 → 可执行按钮（AI 受理/解决/回复/关闭 + 关闭/重开） */
+/** AI 气泡助手状态 */
+const aiBubbleOpen = ref(false)
+const aiSuggestion = ref('')
+const aiSuggestLoading = ref(false)
+
+/** 状态流转动作：当前状态 → 可执行按钮（含 AI 流转） */
 const NEXT_STATUS: Array<{ from: FeedbackStatus[]; to: FeedbackStatus; label: string; tone: 'info' | 'success' | 'warning' | 'muted' }> = [
   { from: ['new'], to: 'analyzing', label: '受理', tone: 'info' },
+  { from: ['new', 'analyzing'], to: 'ai_reviewing', label: 'AI生成回复', tone: 'info' },
   { from: ['new', 'analyzing'], to: 'resolved', label: '解决', tone: 'success' },
   { from: ['new', 'analyzing'], to: 'replied', label: '回复', tone: 'success' },
+  { from: ['ai_reviewing'], to: 'replied', label: '确认发送', tone: 'success' },
+  { from: ['ai_replied'], to: 'closed', label: '关闭', tone: 'muted' },
   { from: ['resolved', 'replied'], to: 'closed', label: '关闭', tone: 'muted' },
   { from: ['closed'], to: 'new', label: '重开', tone: 'warning' },
 ]
@@ -79,6 +88,37 @@ function page(delta: number) {
   if (next < 1) return
   store.setFilter({ page: next })
   void store.fetchPage()
+}
+
+/** AI 生成回复草稿 */
+async function aiGenerateReply() {
+  if (!active.value) return
+  await store.generateReply(active.value.id, active.value.content)
+  active.value = store.items.find((r) => r.id === active.value?.id) ?? active.value
+}
+
+/** AI 自动审批 */
+async function aiAutoApprove() {
+  if (!active.value) return
+  await store.autoApprove(active.value.id, active.value.content)
+  active.value = store.items.find((r) => r.id === active.value?.id) ?? active.value
+}
+
+/** 气泡助手：获取回复建议 */
+async function askAIForSuggestion() {
+  if (!active.value) return
+  aiSuggestLoading.value = true
+  aiSuggestion.value = ''
+  try {
+    aiSuggestion.value = await fetchAIReplySuggestion(active.value.content)
+  } finally {
+    aiSuggestLoading.value = false
+  }
+}
+
+function clearActiveDraft() {
+  if (!active.value) return
+  store.clearDraft(active.value.id)
 }
 </script>
 
@@ -171,6 +211,44 @@ function page(delta: number) {
           <dt>处理人</dt>
           <dd>{{ active.reviewer ?? '未分配' }}</dd>
         </dl>
+
+        <!-- AI 操作区 -->
+        <div v-if="active.status === 'new' || active.status === 'analyzing'" class="ai-section">
+          <div class="ai-section-title">
+            <SfIcon name="logo" :size="14" />
+            AI 辅助处理
+          </div>
+          <div class="ai-actions">
+            <button
+              type="button"
+              class="btn sm ai-btn"
+              :disabled="store.aiDraftLoading === active.id"
+              @click="aiGenerateReply"
+            >
+              <SfIcon name="chat" :size="13" />
+              {{ store.aiDraftLoading === active.id ? '生成中...' : 'AI 生成回复' }}
+            </button>
+            <button
+              type="button"
+              class="btn sm ai-btn primary"
+              :disabled="store.aiApproveLoading === active.id"
+              @click="aiAutoApprove"
+            >
+              <SfIcon name="check" :size="13" />
+              {{ store.aiApproveLoading === active.id ? '审批中...' : 'AI 自动审批' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- AI 草稿展示 -->
+        <div v-if="store.aiDrafts[active.id]" class="ai-draft-box">
+          <div class="ai-draft-header">
+            <span class="ai-draft-label"><SfIcon name="logo" :size="12" /> AI 回复草稿</span>
+            <button type="button" class="btn sm" @click="clearActiveDraft">清除</button>
+          </div>
+          <div class="ai-draft-body">{{ store.aiDrafts[active.id] }}</div>
+        </div>
+
         <div class="act">
           <button
             v-for="n in canAct(active.status)"
@@ -185,6 +263,37 @@ function page(delta: number) {
         </div>
       </div>
     </Drawer>
+
+    <!-- AI 气泡助手（悬浮） -->
+    <div class="ai-bubble" :class="{ open: aiBubbleOpen }">
+      <button type="button" class="ai-bubble-trigger" @click="aiBubbleOpen = !aiBubbleOpen">
+        <SfIcon :name="aiBubbleOpen ? 'close' : 'logo'" :size="20" />
+      </button>
+      <div v-if="aiBubbleOpen" class="ai-bubble-panel">
+        <div class="ai-bubble-head">
+          <SfIcon name="logo" :size="14" />
+          AI 回复助手
+        </div>
+        <div class="ai-bubble-body">
+          <p class="ai-bubble-hint">
+            选中反馈详情后，点击「获取建议」即可基于知识库与政策库获得回复建议。
+          </p>
+          <button
+            type="button"
+            class="btn primary sm"
+            style="width: 100%; margin-top: 8px;"
+            :disabled="!active || aiSuggestLoading"
+            @click="askAIForSuggestion"
+          >
+            {{ aiSuggestLoading ? '思考中...' : '获取回复建议' }}
+          </button>
+          <div v-if="aiSuggestion" class="ai-suggestion">
+            <div class="ai-suggestion-label">建议</div>
+            {{ aiSuggestion }}
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -369,5 +478,134 @@ function page(delta: number) {
   gap: var(--sf-space-2);
   padding-top: var(--sf-space-2);
   border-top: 1px solid var(--sf-border);
+}
+
+/* AI 辅助区 */
+.ai-section {
+  padding: var(--sf-space-3);
+  border-radius: var(--sf-radius-sm);
+  background: linear-gradient(135deg, var(--sf-primary-soft) 0%, transparent 100%);
+  border: 1px solid var(--sf-primary-border);
+}
+.ai-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--sf-font-13);
+  font-weight: 600;
+  color: var(--sf-primary);
+  margin-bottom: var(--sf-space-2);
+}
+.ai-actions {
+  display: flex;
+  gap: var(--sf-space-2);
+  flex-wrap: wrap;
+}
+.ai-btn {
+  border-color: var(--sf-primary-border);
+  color: var(--sf-primary);
+}
+.ai-btn:hover:not(:disabled) {
+  background: var(--sf-primary-soft);
+}
+
+/* AI 草稿展示 */
+.ai-draft-box {
+  padding: var(--sf-space-3);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-bg);
+  border: 1px solid var(--sf-border);
+}
+.ai-draft-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sf-space-2);
+}
+.ai-draft-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-primary);
+}
+.ai-draft-body {
+  font-size: var(--sf-font-13);
+  line-height: 1.6;
+  color: var(--sf-text);
+  white-space: pre-line;
+}
+
+/* AI 气泡助手 */
+.ai-bubble {
+  position: fixed;
+  right: var(--sf-space-4);
+  bottom: var(--sf-space-4);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--sf-space-2);
+}
+.ai-bubble-trigger {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--sf-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+.ai-bubble-trigger:hover {
+  transform: scale(1.05);
+}
+.ai-bubble-panel {
+  width: 320px;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  box-shadow: var(--sf-shadow);
+  overflow: hidden;
+}
+.ai-bubble-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: var(--sf-space-3) var(--sf-space-4);
+  font-size: var(--sf-font-14);
+  font-weight: 600;
+  background: linear-gradient(135deg, var(--sf-primary-soft) 0%, transparent 100%);
+  border-bottom: 1px solid var(--sf-border);
+}
+.ai-bubble-body {
+  padding: var(--sf-space-3) var(--sf-space-4);
+}
+.ai-bubble-hint {
+  margin: 0;
+  font-size: var(--sf-font-13);
+  color: var(--sf-text-secondary);
+  line-height: 1.5;
+}
+.ai-suggestion {
+  margin-top: var(--sf-space-3);
+  padding: var(--sf-space-2) var(--sf-space-3);
+  background: var(--sf-primary-soft);
+  border: 1px solid var(--sf-primary-border);
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-font-13);
+  line-height: 1.5;
+  color: var(--sf-text);
+}
+.ai-suggestion-label {
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-primary);
+  margin-bottom: 4px;
 }
 </style>

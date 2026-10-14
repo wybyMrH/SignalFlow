@@ -115,6 +115,7 @@ const gridYs = computed(() => {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 180px;
 }
 .grid {
   stroke: var(--sf-border);

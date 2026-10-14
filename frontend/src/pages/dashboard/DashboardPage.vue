@@ -1,12 +1,23 @@
 <script setup lang="ts">
 /**
- * FS-1 总览工作台：信号优先的第一屏。
- * 上=指标行（6 KPI）→ 中=信号趋势图 → 下=双栏（待处理反馈 + 优先级信号榜）。
- * 理念：反馈是信号不是噪音，一屏一焦点，数据来自 useInsightsStore（mock 驱动）。
+ * AI 总览面板（重构版）：打破传统管理面板布局，引入 AI 原生设计。
+ * 
+ * 布局编排：
+ * 1. 顶部 = 紧凑 KPI 指标条（保持数据锚点）
+ * 2. 主体 = 左数据区（趋势图 + 双栏列表）+ 右 AI 助手面板（常驻对话栏）
+ * 3. 底部 = AI 工作流状态 + 自动化规则配置
+ * 
+ * AI 能力：
+ * - 侧边常驻 AI 对话栏：自然语言查询 → mock 工作流 → 数据总结/知识库回复
+ * - 工作流状态面板：实时展示 AI 处理中任务与进度
+ * - 自动化扩展区：面向政企场景的预设规则开关与统计
  */
 import { computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 
+import AIAutomationRules from '@/components/ai/AIAutomationRules.vue'
+import AIChatPanel from '@/components/ai/AIChatPanel.vue'
+import AIWorkflowStatus from '@/components/ai/AIWorkflowStatus.vue'
 import BarRow from '@/components/common/BarRow.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
@@ -44,7 +55,7 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
 
 <template>
   <div class="dash">
-    <!-- 指标行 -->
+    <!-- 顶部：紧凑 KPI 指标条 -->
     <div class="kpi-row">
       <template v-if="insights.metricsLoading || !metrics">
         <Skeleton v-for="i in 6" :key="i" :rows="2" class="kpi-skel" />
@@ -59,57 +70,73 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
       </template>
     </div>
 
-    <!-- 趋势图 -->
-    <section class="card trend-card">
-      <div class="card-head">
-        <h2 class="card-title">信号趋势</h2>
-        <span class="card-sub">{{ metrics ? `更新 ${formatDateTime(metrics.updated_at)}` : '' }}</span>
-      </div>
-      <TrendChart v-if="metrics" :points="metrics.trend" :height="150" />
-      <Skeleton v-else :rows="3" />
-    </section>
-
-    <!-- 双栏 -->
-    <div class="duo">
-      <section class="card">
-        <div class="card-head">
-          <h2 class="card-title">待处理反馈</h2>
-          <button type="button" class="link-btn" @click="goFeedback('new')">
-            全部 <SfIcon name="chevron-right" :size="14" />
-          </button>
-        </div>
-        <Skeleton v-if="feedback.pendingLoading" :rows="5" />
-        <ul v-else class="mini-list">
-          <li v-for="item in feedback.pendingItems" :key="item.id" class="mini-item" @click="goFeedback('new')">
-            <div class="mini-top">
-              <span class="mini-title">{{ item.id }}</span>
-              <StatusBadge :label="sourceLabels[item.source as keyof typeof sourceLabels] ?? item.source" tone="neutral" />
-            </div>
-            <p class="mini-text">{{ item.content }}</p>
-          </li>
-        </ul>
-      </section>
-
-      <section class="card">
-        <div class="card-head">
-          <h2 class="card-title">优先级信号榜</h2>
-          <button type="button" class="link-btn" @click="goInsights">
-            洞察 <SfIcon name="chevron-right" :size="14" />
-          </button>
-        </div>
-        <Skeleton v-if="insights.dashboardLoading" :rows="5" />
-        <div v-else class="signal-list">
-          <div v-for="t in topTopics" :key="t.id" class="signal-item" role="button" tabindex="0" @click="goInsights" @keydown.enter="goInsights">
-            <div class="signal-top">
-              <span class="signal-title">{{ t.title }}</span>
-              <StatusBadge :label="String(t.priority_score)" :tone="priorTone(t.priority_score)" />
-            </div>
-            <BarRow :label="t.short" :value="t.strength" :pct="t.strength" :tone="priorTone(t.priority_score)" />
-            <span class="signal-meta">{{ t.feedback_count }} 条反馈 · 强度 {{ t.strength }}</span>
+    <!-- 主体：左数据区 + 右 AI 助手 -->
+    <div class="main-grid">
+      <div class="data-area">
+        <!-- 趋势图 -->
+        <section class="card trend-card">
+          <div class="card-head">
+            <h2 class="card-title">信号趋势</h2>
+            <span class="card-sub">{{ metrics ? `更新 ${formatDateTime(metrics.updated_at)}` : '' }}</span>
           </div>
+          <TrendChart v-if="metrics" :points="metrics.trend" :height="150" />
+          <Skeleton v-else :rows="3" />
+        </section>
+
+        <!-- 双栏：待处理反馈 + 优先级信号榜 -->
+        <div class="duo">
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">待处理反馈</h2>
+              <button type="button" class="link-btn" @click="goFeedback('new')">
+                全部 <SfIcon name="chevron-right" :size="14" />
+              </button>
+            </div>
+            <Skeleton v-if="feedback.pendingLoading" :rows="5" />
+            <ul v-else class="mini-list">
+              <li v-for="item in feedback.pendingItems" :key="item.id" class="mini-item" @click="goFeedback('new')">
+                <div class="mini-top">
+                  <span class="mini-title">{{ item.id }}</span>
+                  <StatusBadge :label="sourceLabels[item.source as keyof typeof sourceLabels] ?? item.source" tone="neutral" />
+                </div>
+                <p class="mini-text">{{ item.content }}</p>
+              </li>
+            </ul>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <h2 class="card-title">优先级信号榜</h2>
+              <button type="button" class="link-btn" @click="goInsights">
+                洞察 <SfIcon name="chevron-right" :size="14" />
+              </button>
+            </div>
+            <Skeleton v-if="insights.dashboardLoading" :rows="5" />
+            <div v-else class="signal-list">
+              <div v-for="t in topTopics" :key="t.id" class="signal-item" role="button" tabindex="0" @click="goInsights" @keydown.enter="goInsights">
+                <div class="signal-top">
+                  <span class="signal-title">{{ t.title }}</span>
+                  <StatusBadge :label="String(t.priority_score)" :tone="priorTone(t.priority_score)" />
+                </div>
+                <BarRow :label="t.short" :value="t.strength" :pct="t.strength" :tone="priorTone(t.priority_score)" />
+                <span class="signal-meta">{{ t.feedback_count }} 条反馈 · 强度 {{ t.strength }}</span>
+              </div>
+            </div>
+          </section>
         </div>
-      </section>
+      </div>
+
+      <!-- 右 AI 助手面板（常驻） -->
+      <div class="ai-area">
+        <AIChatPanel />
+      </div>
     </div>
+
+    <!-- 底部：AI 工作流状态 -->
+    <AIWorkflowStatus />
+
+    <!-- 底部：AI 自动化扩展 -->
+    <AIAutomationRules />
   </div>
 </template>
 
@@ -119,6 +146,8 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   flex-direction: column;
   gap: var(--sf-space-3);
 }
+
+/* KPI 指标条 */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -131,6 +160,33 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   background: var(--sf-surface);
   padding: 12px 16px;
 }
+
+/* 主体网格：左数据 + 右 AI */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: var(--sf-space-3);
+  min-height: 0;
+  align-items: start;
+}
+.data-area {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+  min-height: 0;
+}
+.ai-area {
+  min-height: 0;
+  height: 100%;
+  max-height: calc(100vh - var(--sf-header-h) - 140px);
+  position: sticky;
+  top: var(--sf-space-3);
+}
+.ai-area > * {
+  height: 100%;
+}
+
+/* 卡片通用 */
 .card {
   background: var(--sf-surface);
   border: 1px solid var(--sf-border);
@@ -167,6 +223,8 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
 .link-btn:hover {
   text-decoration: underline;
 }
+
+/* 双栏 */
 .duo {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -243,7 +301,15 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   color: var(--sf-text-faint);
 }
 
+/* 响应式 */
 @media (max-width: 1200px) {
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+  .ai-area {
+    position: static;
+    max-height: 520px;
+  }
   .kpi-row {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

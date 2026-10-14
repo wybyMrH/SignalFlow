@@ -1,0 +1,162 @@
+/**
+ * SignalFlow 全局样式与设计 Token。
+ * 色板/密度/布局遵循 docs/frontend-development-plan.md §5（2026-10-14 调整版）：
+ * 用户反馈后由"深海军蓝侧栏"调整为"淡色有活力"风格——浅色主题下侧栏白/淡蓝底、
+ * 品牌蓝活跃项、页面背景淡蓝灰；深色主题保留为可选切换项。
+ * 所有颜色一律通过 token 引用，禁止组件内硬编码色值。
+ */
+:root {
+  /* 色板（浅色，淡色有活力） */
+  --sf-primary: #2563eb;
+  --sf-primary-light: #60a5fa;
+  --sf-primary-strong: #1e293b;
+  --sf-primary-soft: #eff6ff;
+  --sf-primary-border: #bfdbfe;
+  --sf-bg: #f4f7fb;
+  --sf-surface: #ffffff;
+  --sf-border: #e2e8f0;
+  --sf-text: #0f172a;
+  --sf-text-secondary: #475569;
+  --sf-text-faint: #94a3b8;
+  --sf-success: #22c55e;
+  --sf-success-soft: #ecfdf5;
+  --sf-warning: #f59e0b;
+  --sf-warning-soft: #fffbeb;
+  --sf-danger: #ef4444;
+  --sf-danger-soft: #fef2f2;
+  --sf-info: #0ea5e9;
+  --sf-info-soft: #f0f9ff;
+
+  /* 侧边栏：浅色主题淡色底（活跃项用品牌蓝），适配完整屏幕观感 */
+  --sf-sidebar-bg: #ffffff;
+  --sf-sidebar-text: #1e293b;
+  --sf-sidebar-muted: #64748b;
+  --sf-sidebar-border: #e8edf4;
+
+  /* 布局与间距（4px 基准） */
+  --sf-space-1: 4px;
+  --sf-space-2: 8px;
+  --sf-space-3: 12px;
+  --sf-space-4: 16px;
+  --sf-space-5: 20px;
+  --sf-space-6: 24px;
+  --sf-sidebar-w: 72px;
+  --sf-header-h: 56px;
+  --sf-radius-sm: 6px;
+  --sf-radius: 10px;
+  --sf-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.04);
+
+  /* 行高（统一，保证全屏可读性） */
+  --sf-line-height: 1.6;
+
+  /* 字号层级（最多 5 级） */
+  --sf-font-24: 24px;
+  --sf-font-16: 16px;
+  --sf-font-15: 15px;
+  --sf-font-14: 14px;
+  --sf-font-13: 13px;
+  --sf-font-12: 12px;
+}
+
+/* 深色主题：html.dark 切换（可选，默认浅色） */
+html.dark {
+  --sf-primary: #3b82f6;
+  --sf-primary-light: #93c5fd;
+  --sf-primary-strong: #e2e8f0;
+  --sf-primary-soft: #172554;
+  --sf-primary-border: #1e3a8a;
+  --sf-bg: #0b1120;
+  --sf-surface: #0f172a;
+  --sf-border: #1e293b;
+  --sf-text: #e2e8f0;
+  --sf-text-secondary: #94a3b8;
+  --sf-text-faint: #64748b;
+  --sf-success: #4ade80;
+  --sf-success-soft: #052e16;
+  --sf-warning: #fbbf24;
+  --sf-warning-soft: #451a03;
+  --sf-danger: #f87171;
+  --sf-danger-soft: #450a0a;
+  --sf-info: #38bdf8;
+  --sf-info-soft: #0c4a6e;
+
+  /* 深色主题下侧栏保留深色面板 */
+  --sf-sidebar-bg: #0b1120;
+  --sf-sidebar-text: #e2e8f0;
+  --sf-sidebar-muted: #94a3b8;
+  --sf-sidebar-border: #1e293b;
+
+  --sf-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: var(--sf-font-14);
+  line-height: var(--sf-line-height);
+  color: var(--sf-text);
+  background: var(--sf-bg);
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 数字对齐 */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 通用卡片（与占位页共用；业务页面按需在组件内细化） */
+.page-card {
+  padding: var(--sf-space-4);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  background: var(--sf-surface);
+  box-shadow: var(--sf-shadow);
+}
+
+.page-card h2 {
+  margin: 0 0 var(--sf-space-2);
+  font-size: var(--sf-font-16);
+  font-weight: 600;
+}
+
+.page-placeholder {
+  color: var(--sf-text-secondary);
+  font-size: var(--sf-font-13);
+}
+
+a {
+  color: var(--sf-primary);
+}
+
+/* 滚动条（WebKit） */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--sf-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

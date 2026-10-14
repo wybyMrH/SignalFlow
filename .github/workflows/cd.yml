@@ -1,0 +1,22 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy (placeholder)
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy placeholder
+        run: |
+          echo "CD 部署阶段预留。目标环境确定后，在此接入："
+          echo "  1) SSH / Ansible 登录目标主机（或使用 Kubernetes / 云厂商部署）"
+          echo "  2) 拉取 ghcr.io/${{ github.repository }}/signalflow-* 镜像"
+          echo "  3) 注入生产环境变量并执行 docker compose up -d"
+          echo "政务内网/国产化环境离线部署时，镜像经介质导入，本步骤替换为内部镜像仓库同步。"

@@ -1,0 +1,8 @@
+# 前端镜像构建上下文排除项
+node_modules/
+dist/
+.env.local
+.env.*.local
+*.log
+.git/
+.gitignore

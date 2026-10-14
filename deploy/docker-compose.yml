@@ -1,0 +1,77 @@
+# SignalFlow 部署编排（骨架）
+# 服务：postgres(pgvector) + redis + backend(FastAPI) + frontend(Nginx)
+#
+# 用法：
+#   cd deploy
+#   cp .env.example .env    # 修改密钥与端口
+#   docker compose up -d --build
+# 访问：前端 http://localhost:8080 ，后端健康检查 http://localhost:8000/healthz
+
+name: signalflow
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-signalflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-signalflow}
+      POSTGRES_DB: ${POSTGRES_DB:-signalflow}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-signalflow} -d ${POSTGRES_DB:-signalflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-signalflow}:${POSTGRES_PASSWORD:-signalflow}@postgres:5432/${POSTGRES_DB:-signalflow}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      # LLM / Embedding 配置由 deploy/.env 注入
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_FALLBACK_MODEL: ${LLM_FALLBACK_MODEL:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-openai}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-text-embedding-3-small}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      WORKFLOW_LLM_ENABLED: ${WORKFLOW_LLM_ENABLED:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

@@ -235,7 +235,7 @@ SignalFlow/
 
 ### 访谈 → 商务线索联动
 
-![访谈联动](docs/screenshots/interview-to-lead.png)
+![访谈联动](docs/screenshots/interview-detail.png)
 
 *客户访谈 AI 提炼痛点 → 识别合作意向 → 一键生成线索并汇入商务洞察*
 

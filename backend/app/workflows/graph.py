@@ -1,84 +1,78 @@
 """SignalFlow 后端 - 分析工作流图构建。
 
-骨架阶段的图：始终贯通所有节点，但 LLM/Embedding 节点在
-`workflow_llm_enabled=False` 时走"旁路占位"实现，保证可离线运行与测试。
-后续切片逐个将旁路替换为真实实现（llm 网关 + 向量检索）。
+工作流编排客户反馈分析闭环：
+START → dedup → cluster → eval → priority → draft → END
+
+每个节点接收可选的 ``LLMGateway``（经闭包注入）；当
+``workflow_llm_enabled=False`` 或网关不可用时，节点自动退化为
+规则/mock 实现，保证全链路可离线运行与测试。
 """
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Callable, TypeVar
 
 from langgraph.graph import END, START, StateGraph
 
 from app.core.config import settings
 from app.core.logging import get_logger
+from app.workflows.nodes import cluster_node, dedup_node, draft_node, eval_node, priority_node
 from app.workflows.state import FeedbackAnalysisState
+
+if TYPE_CHECKING:
+    from app.llm.gateway import LLMGateway
 
 logger = get_logger(__name__)
 
-
-def _dedup_node(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
-    """去重节点：骨架占位。真实实现基于 Embedding 相似度分组。"""
-    ids = state.get("feedback_ids", [])
-    # 骨架：无重复假设，每个 id 自成一组
-    return {
-        **state,
-        "dedup_groups": [[i] for i in ids],
-    }
+T = TypeVar("T")
 
 
-def _cluster_node(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
-    """聚类节点：骨架占位。真实实现基于向量聚类（HDBSCAN 等）。"""
-    logger.info("cluster node (skeleton): %s", state.get("feedback_ids"))
-    return {
-        **state,
-        "clusters": [],
-    }
+def _with_gateway(
+    node: Callable[..., FeedbackAnalysisState],
+    gateway: "LLMGateway | None",
+) -> Callable[[FeedbackAnalysisState], FeedbackAnalysisState]:
+    """把可选网关绑定到节点闭包，保持节点签名的可测试性。"""
+
+    def _run(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
+        return node(state, gateway=gateway)
+
+    return _run
 
 
-def _insight_node(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
-    """痛点归纳节点：骨架占位。真实实现调用 Aware LLM 摘要。"""
-    logger.info("insight node (skeleton): llm_enabled=%s", settings.workflow_llm_enabled)
-    return {
-        **state,
-        "pain_points": [],
-        "themes": [],
-    }
+def build_analysis_graph(
+    *,
+    gateway: "LLMGateway | None" = None,
+) -> StateGraph:
+    """组装 LangGraph 分析工作流图（未编译）。
 
-
-def _assess_node(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
-    """影响评估节点：骨架占位。真实实现计算影响面与优先级评分。"""
-    return {
-        **state,
-        "impact_assessments": [],
-        "priorities": [],
-        "decisions": [],
-    }
-
-
-def _draft_node(state: FeedbackAnalysisState) -> FeedbackAnalysisState:
-    """回复草稿节点：骨架占位。真实实现基于决策与痛点生成客户回复草稿。"""
-    return {
-        **state,
-        "reply_drafts": [],
-    }
-
-
-def build_analysis_graph():
-    """组装 LangGraph 分析工作流图。返回可编译/可调用的 CompiledGraph。"""
+    参数：
+        gateway: 可选的 LLM 网关；为 None 时节点走规则/mock 路径。
+    返回：
+        可继续配置或直接 ``compile()`` 的 :class:`StateGraph`。
+    """
     builder = StateGraph(FeedbackAnalysisState)
 
-    builder.add_node("dedup", _dedup_node)
-    builder.add_node("cluster", _cluster_node)
-    builder.add_node("insight", _insight_node)
-    builder.add_node("assess", _assess_node)
-    builder.add_node("draft", _draft_node)
+    builder.add_node("dedup", _with_gateway(dedup_node, gateway))
+    builder.add_node("cluster", _with_gateway(cluster_node, gateway))
+    builder.add_node("eval", _with_gateway(eval_node, gateway))
+    builder.add_node("priority", _with_gateway(priority_node, gateway))
+    builder.add_node("draft", _with_gateway(draft_node, gateway))
 
     builder.add_edge(START, "dedup")
     builder.add_edge("dedup", "cluster")
-    builder.add_edge("cluster", "insight")
-    builder.add_edge("insight", "assess")
-    builder.add_edge("assess", "draft")
+    builder.add_edge("cluster", "eval")
+    builder.add_edge("eval", "priority")
+    builder.add_edge("priority", "draft")
     builder.add_edge("draft", END)
 
-    return builder.compile()
+    return builder
 
 
-analysis_graph = build_analysis_graph()
+# 模块级预热：使用默认网关（未注入时为 None，节点走规则路径）。
+analysis_graph = build_analysis_graph(gateway=None).compile()
+
+logger.info(
+    "Analysis graph ready: workflow_llm_enabled=%s (%s)",
+    settings.workflow_llm_enabled,
+    "LLM 已注入" if settings.workflow_llm_enabled else "规则/mock 模式",
+)

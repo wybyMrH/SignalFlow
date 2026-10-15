@@ -58,3 +58,6 @@ ignore = ["B008"]  # FastAPI Depends() in defaults is intentional
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+markers = [
+  "integration: 需要真实外部依赖（如 PostgreSQL 容器）的集成测试",
+]

@@ -23,6 +23,7 @@ engine = create_engine(
     max_overflow=20,
     pool_recycle=3600,
     echo=settings.app_debug,
+    connect_args={"connect_timeout": 10},
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)

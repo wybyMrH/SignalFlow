@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 
+import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -326,6 +327,8 @@ onMounted(() => {
       </div>
     </div>
   </div>
+
+  <AIFloatingAssistant context="business" />
 </template>
 
 <style scoped>

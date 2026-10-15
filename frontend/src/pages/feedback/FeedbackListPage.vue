@@ -348,31 +348,34 @@ function insertSuggestionToDraft() {
           </div>
         </div>
 
-        <!-- 历史回复 -->
-        <div v-if="active.reply_content" class="reply-box">
-          <div class="reply-header">
-            <SfIcon name="chat" :size="12" /> 已回复内容
+        <!-- 回复内容区：始终可见，按状态展示不同标签与内容 -->
+        <div class="reply-section">
+          <div class="reply-section-header">
+            <SfIcon name="chat" :size="12" />
+            <span v-if="active.reply_content">已回复内容</span>
+            <span v-else-if="store.aiDrafts[active.id] || editableDrafts[active.id]">AI 回复草稿（审核中）</span>
+            <span v-else>回复内容</span>
+            <span v-if="active.reviewer || active.replied_at" class="reply-meta">
+              <span v-if="active.reviewer">{{ active.reviewer }}</span>
+              <span v-if="active.replied_at">{{ formatDateTime(active.replied_at) }}</span>
+            </span>
           </div>
-          <div class="reply-body">{{ active.reply_content }}</div>
-        </div>
-
-        <!-- AI 草稿展示（可编辑） -->
-        <div v-if="store.aiDrafts[active.id]" class="ai-draft-box">
-          <div class="ai-draft-header">
-            <span class="ai-draft-label"><SfIcon name="logo" :size="12" /> AI 回复草稿</span>
-            <button type="button" class="btn sm" @click="clearActiveDraft">清除</button>
+          <div v-if="active.reply_content" class="reply-body">{{ active.reply_content }}</div>
+          <div v-else-if="store.aiDrafts[active.id] || editableDrafts[active.id]" class="ai-draft-wrap">
+            <textarea
+              :value="editableDrafts[active.id] ?? store.aiDrafts[active.id]"
+              @input="(e: any) => { if (active) editableDrafts[active.id] = e.target.value }"
+              class="ai-draft-textarea"
+              rows="8"
+              placeholder="可在此修改 AI 生成的回复草稿..."
+            />
+            <div class="ai-draft-footer">
+              <button type="button" class="btn sm" @click="clearActiveDraft">清除</button>
+              <button type="button" class="btn sm" @click="saveDraft">保存草稿</button>
+              <button type="button" class="btn sm primary" @click="sendDraft">采用并发送</button>
+            </div>
           </div>
-          <textarea
-            :value="editableDrafts[active.id] ?? store.aiDrafts[active.id]"
-            @input="(e: any) => { if (active) editableDrafts[active.id] = e.target.value }"
-            class="ai-draft-textarea"
-            rows="4"
-            placeholder="可在此修改 AI 生成的回复草稿..."
-          />
-          <div class="ai-draft-footer">
-            <button type="button" class="btn sm" @click="saveDraft">保存草稿</button>
-            <button type="button" class="btn sm primary" @click="sendDraft">采用并发送</button>
-          </div>
+          <div v-else class="reply-body empty">暂无回复</div>
         </div>
 
         <div class="act">
@@ -723,52 +726,59 @@ function insertSuggestionToDraft() {
   background: var(--sf-primary-soft);
 }
 
-/* 历史回复 */
-.reply-box {
+/* 回复内容区（统一展示：已回复 / AI草稿 / 空回复） */
+.reply-section {
   padding: var(--sf-space-3);
   border-radius: var(--sf-radius-sm);
-  background: var(--sf-success-soft);
-  border: 1px solid var(--sf-success);
+  background: var(--sf-bg);
+  border: 1px solid var(--sf-border);
 }
-.reply-header {
+.reply-section-header {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   font-size: var(--sf-font-12);
   font-weight: 600;
-  color: var(--sf-success);
+  color: var(--sf-text-secondary);
   margin-bottom: var(--sf-space-2);
+  flex-wrap: wrap;
+}
+.reply-section-header .reply-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--sf-text-faint);
+  font-size: var(--sf-font-12);
 }
 .reply-body {
   font-size: var(--sf-font-13);
   line-height: 1.6;
   color: var(--sf-text);
   white-space: pre-line;
+  padding: var(--sf-space-2);
+  background: var(--sf-success-soft);
+  border-radius: var(--sf-radius-sm);
+  border: 1px solid var(--sf-success);
+}
+.reply-body.empty {
+  background: var(--sf-bg);
+  border: 1px dashed var(--sf-border);
+  color: var(--sf-text-faint);
+  text-align: center;
+  padding: var(--sf-space-4);
 }
 
-/* AI 草稿展示 */
-.ai-draft-box {
-  padding: var(--sf-space-3);
-  border-radius: var(--sf-radius-sm);
-  background: var(--sf-bg);
-  border: 1px solid var(--sf-border);
-}
-.ai-draft-header {
+/* AI 草稿编辑区 */
+.ai-draft-wrap {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: var(--sf-space-2);
-}
-.ai-draft-label {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: var(--sf-font-12);
-  font-weight: 600;
-  color: var(--sf-primary);
+  flex-direction: column;
+  gap: var(--sf-space-2);
 }
 .ai-draft-textarea {
   width: 100%;
+  min-height: 180px;
   padding: var(--sf-space-2);
   border: 1px solid var(--sf-border);
   border-radius: var(--sf-radius-sm);
@@ -782,7 +792,9 @@ function insertSuggestionToDraft() {
 .ai-draft-footer {
   display: flex;
   gap: var(--sf-space-2);
-  margin-top: var(--sf-space-2);
+  padding-top: var(--sf-space-2);
+  border-top: 1px solid var(--sf-border);
+  margin-top: var(--sf-space-1);
 }
 
 /* AI 气泡助手 */

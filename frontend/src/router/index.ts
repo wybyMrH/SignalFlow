@@ -46,16 +46,40 @@ const router = createRouter({
       meta: { title: 'AI 自动化', icon: 'automation' },
     },
     {
+      path: '/workflows',
+      name: 'workflows',
+      component: () => import('@/pages/workflows/WorkflowConfigPage.vue'),
+      meta: { title: '工作流配置', icon: 'workflow' },
+    },
+    {
       path: '/business',
       name: 'business',
       component: () => import('@/pages/business/BusinessPage.vue'),
       meta: { title: '商务洞察', icon: 'briefcase' },
     },
     {
+      path: '/interview',
+      name: 'interview',
+      component: () => import('@/pages/interview/InterviewPage.vue'),
+      meta: { title: '客户访谈', icon: 'mic' },
+    },
+    {
       path: '/gov',
       name: 'gov',
       component: () => import('@/pages/gov/GovPage.vue'),
       meta: { title: '政务适配', icon: 'gov' },
+    },
+    {
+      path: '/agents',
+      name: 'agents',
+      component: () => import('@/pages/agents/AgentConfigPage.vue'),
+      meta: { title: 'Agent 配置', icon: 'agent' },
+    },
+    {
+      path: '/resources',
+      name: 'resources',
+      component: () => import('@/pages/resources/ResourceMonitorPage.vue'),
+      meta: { title: '资源管理', icon: 'server' },
     },
     {
       path: '/settings',

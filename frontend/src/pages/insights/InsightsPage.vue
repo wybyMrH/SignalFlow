@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, ref } from 'vue'
 
+import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import BarRow from '@/components/common/BarRow.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -124,6 +125,8 @@ function select(id: string) {
       <p v-else class="empty-text">无主题数据</p>
     </section>
   </div>
+
+  <AIFloatingAssistant context="insights" />
 </template>
 
 <style scoped>

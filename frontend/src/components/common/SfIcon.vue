@@ -47,6 +47,11 @@ export type IconName =
   | 'need'
   | 'map'
   | 'megaphone'
+  | 'mic'
+  | 'agent'
+  | 'server'
+  | 'workflow'
+  | 'database'
 </script>
 
 <template>
@@ -246,6 +251,39 @@ export type IconName =
     <template v-else-if="name === 'megaphone'">
       <path d="M4 10v4a1 1 0 0 0 1 1h2l8 4.5V4.5L7 9H5a1 1 0 0 0-1 1Z" />
       <path d="M18 9a4 4 0 0 1 0 6M15.5 9.8a5 5 0 0 1 0 4.4" />
+    </template>
+    <!-- 客户访谈：麦克风 -->
+    <template v-else-if="name === 'mic'">
+      <path d="M12 2a3 3 0 0 1 3 3v6a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3Z" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3M8 21h8" />
+    </template>
+    <!-- Agent/智能体：机器人 -->
+    <template v-else-if="name === 'agent'">
+      <rect x="4" y="7" width="16" height="11" rx="2.5" />
+      <path d="M12 7V4.5M9 4.5h6" />
+      <path d="M9 11.5h.01M15 11.5h.01" />
+      <path d="M9 15h6" />
+    </template>
+    <!-- 资源/服务器：机架 -->
+    <template v-else-if="name === 'server'">
+      <rect x="3" y="4" width="18" height="7" rx="2" />
+      <rect x="3" y="13" width="18" height="7" rx="2" />
+      <path d="M7 7.5h.01M7 16.5h.01" />
+    </template>
+    <!-- 工作流：节点连线 -->
+    <template v-else-if="name === 'workflow'">
+      <circle cx="5.5" cy="6.5" r="2" />
+      <circle cx="5.5" cy="17.5" r="2" />
+      <circle cx="18.5" cy="12" r="2" />
+      <path d="M7.5 6.5H15a2 2 0 0 1 2 2v1.5" />
+      <path d="M17 14v1.5a2 2 0 0 1-2 2H7.5" />
+    </template>
+    <!-- 数据库：柱状存储 -->
+    <template v-else-if="name === 'database'">
+      <ellipse cx="12" cy="5.5" rx="8" ry="3" />
+      <path d="M4 5.5v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5" />
+      <path d="M4 12v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V12" />
     </template>
   </svg>
 </template>

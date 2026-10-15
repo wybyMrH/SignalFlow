@@ -28,6 +28,7 @@ import type {
   CommonNeed,
   DedupGroup,
   IndustryShare,
+  InterviewRecord,
   MarketSignal,
   PriorityAdjustment,
   PriorityRule,
@@ -88,7 +89,8 @@ export const useAIStore = defineStore('ai', () => {
     }
   }
 
-  async function fetchRules() {
+  async function fetchRules(force = false) {
+    if (!force && rules.value.length) return
     rulesLoading.value = true
     try {
       rules.value = await fetchAIAutomationRules()
@@ -127,7 +129,8 @@ export const useAIStore = defineStore('ai', () => {
   }
 
   // 自动化中心 actions
-  async function fetchClassification() {
+  async function fetchClassification(force = false) {
+    if (!force && classificationResults.value.length) return
     classificationLoading.value = true
     try {
       classificationResults.value = await fetchAutoClassification()
@@ -136,7 +139,8 @@ export const useAIStore = defineStore('ai', () => {
     }
   }
 
-  async function fetchDedup() {
+  async function fetchDedup(force = false) {
+    if (!force && dedupGroups.value.length) return
     dedupLoading.value = true
     try {
       dedupGroups.value = await fetchDedupGroups()
@@ -145,7 +149,8 @@ export const useAIStore = defineStore('ai', () => {
     }
   }
 
-  async function fetchPriorityRuleList() {
+  async function fetchPriorityRuleList(force = false) {
+    if (!force && priorityRules.value.length) return
     priorityRulesLoading.value = true
     try {
       priorityRules.value = await fetchPriorityRules()
@@ -154,7 +159,8 @@ export const useAIStore = defineStore('ai', () => {
     }
   }
 
-  async function fetchAdjustments() {
+  async function fetchAdjustments(force = false) {
+    if (!force && priorityAdjustments.value.length) return
     adjustmentsLoading.value = true
     try {
       priorityAdjustments.value = await fetchPriorityAdjustments()
@@ -198,7 +204,8 @@ export const useAIStore = defineStore('ai', () => {
   }
 
   // 商务洞察 actions
-  async function fetchBusinessLeadsList() {
+  async function fetchBusinessLeadsList(force = false) {
+    if (!force && businessLeads.value.length) return
     leadsLoading.value = true
     try {
       businessLeads.value = await fetchBusinessLeads()
@@ -260,6 +267,36 @@ export const useAIStore = defineStore('ai', () => {
     else if (lead.stage === 'qualified') lead.stage = 'pushed'
   }
 
+  /** 客户访谈联动：由访谈 AI 提炼结果生成商务线索，汇入商务线索池 */
+  function addLeadFromInterview(record: InterviewRecord): BusinessLead {
+    const intentScore =
+      record.extraction?.cooperation_intent === 'high' ? 85 : record.extraction?.cooperation_intent === 'medium' ? 65 : 45
+    const lead: BusinessLead = {
+      id: `BL-${String(businessLeads.value.length + 1).padStart(3, '0')}`,
+      feedback_id: record.linked_feedback_ids[0] ?? `IV-${record.id}`,
+      content: record.summary,
+      company_name: record.company_name,
+      industry: record.industry,
+      company_type: record.company_type,
+      size_band: '待确认',
+      matched_product: record.extraction?.matched_needs[0] ?? '待匹配产品',
+      match_reason: record.extraction?.lead_reason ?? '客户访谈 AI 提炼形成合作意向',
+      value_score: intentScore,
+      confidence: 0.85,
+      stage: 'identified',
+      created_at: new Date().toISOString(),
+    }
+    businessLeads.value.unshift(lead)
+    if (businessSummary.value) {
+      businessSummary.value = {
+        ...businessSummary.value,
+        total_leads: businessSummary.value.total_leads + 1,
+        customer_count: businessSummary.value.customer_count + 1,
+      }
+    }
+    return lead
+  }
+
   return {
     workflows,
     rules,
@@ -315,5 +352,6 @@ export const useAIStore = defineStore('ai', () => {
     fetchBusinessSummaryData,
     loadBusinessCenter,
     advanceLeadStage,
+    addLeadFromInterview,
   }
 })

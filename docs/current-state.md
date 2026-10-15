@@ -1,13 +1,13 @@
 # 当前状态记录
 
-文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架 + 反馈 UI 与统计卡修复/详情抽屉与气泡助手重构/AI 自动化流程/商务洞察/政务统计扩展）
+文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架 + 反馈 UI 与统计卡修复/详情抽屉与气泡助手重构/AI 自动化流程/商务洞察/政务统计扩展 + 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置）与 store 守卫集成修复）
 
 ## 评审范围
 
 - 需求或任务：在 E:\code\interview\SignalFlow 搭建 SignalFlow 客户反馈决策工具的工程骨架（已完成）；随后按用户要求进入**前端阶段——用模拟数据把前端从入口按业务需求与功能切片推进，先以文档落盘计划/需求/技术参考，再实现可演示闭环**（本记录当前聚焦前端阶段）。
 - 评审日期：2026-10-15
-- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据；E-1~E-5 扩展功能（反馈统计卡/详情抽屉与气泡助手重构/AI 自动化/商务洞察/政务统计扩展）实现与浏览器验收证据。
-- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架，以及 2026-10-15 增补的反馈 UI 与统计卡修复、详情抽屉与气泡助手重构、AI 自动化流程、商务合作信息提炼与政务统计扩展；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供；真实后端 `/gov/overview` 契约亦属后续阶段）。
+- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据；E-1~E-5 扩展功能（反馈统计卡/详情抽屉与气泡助手重构/AI 自动化/商务洞察/政务统计扩展）实现与浏览器验收证据；O-1~O-6 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置/集成闭环联动）实现与浏览器验收证据。
+- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架，以及 2026-10-15 增补的反馈 UI 与统计卡修复、详情抽屉与气泡助手重构、AI 自动化流程、商务合作信息提炼与政务统计扩展，以及 2026-10-15 二次增补的运营驾驶舱扩展（总览信息块与客户访谈、Agent 配置中心、资源管理、LangGraph 工作流配置、三向闭环联动与 store 守卫修复）；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供；真实后端 `/gov/overview` 契约亦属后续阶段）。
 
 ## 骨架阶段已关闭项（沿用首次评审）
 
@@ -55,6 +55,17 @@
 | E-4 | 商务合作信息 AI 提炼与市场动向报告 | `frontend/src/pages/business/BusinessPage.vue`、`frontend/src/stores/ai.ts`（商务汇总）、`frontend/src/mocks/ai.ts`（fetchBusinessLeads/IndustryShares/MarketSignals/CommonNeeds/InsightSummary）、`frontend/src/types/index.ts` | 已实现 | 从反馈中识别企业合作线索、按行业聚合分布、提炼市场动向信号、归纳跨企业共性需求并生成可视化汇总报告：顶部统计卡（企业合作线索/覆盖行业/市场动向信号/共性需求归纳）+ 企业线索/行业分布/市场动向/共性需求四个面板；线索推进（identified→qualified→pushed）保留人工确认 | 动态（浏览器验收 + type-check/build） | 商务联动新入口 | 保持 | 已关闭 |
 | E-5 | 政务统计扩展与侧边栏入口重构 | `frontend/src/pages/gov/GovPage.vue`（全量重写）、`frontend/src/mocks/gov.ts`、`frontend/src/types/index.ts`、`frontend/src/components/common/SfIcon.vue`（新增 map/megaphone path）、`frontend/src/api/gov.ts`（保持单接口） | 已实现 | GovPage 重构为「6 张顶部统计卡（总诉求 48/本周新增 7/待办 12/逾期 3/按期办结率 81%/最高预警-橙色）+ 报告元信息条（统计周期·生成时间·AI 仅提炼声明）+ 7 个标签面板（诉求分级/督办事项/区域分布/热点主题/舆情预警/政策告知/审计留痕）」；舆情四级复用在 StatusBadge tone 白名单之外自绘 `.alert-blue/.alert-yellow/.alert-orange/.alert-red` 徽章；最高预警色 `.level-orange{color:#d97706}` | 动态（浏览器逐标签验收 + type-check/build + Docker 容器走查） | 政务演示闭环 | 保持 | 已关闭 |
 
+## 运营驾驶舱扩展阶段当前项（2026-10-15 二次增补）
+
+| ID | 需求或契约点 | 文件/模块/边界 | 分类 | 观察行为 | 证据等级 | 影响 | 建议处理 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| O-1 | 详情抽屉回复可见性与 AI 草稿区调高 | `frontend/src/pages/feedback/FeedbackListPage.vue`、`frontend/src/stores/feedback.ts` | 已实现 | 抽屉无论状态分支（已回复/无回复/AI 审核中）均展示回复内容区：已回复展示完整回复文本与发送人/时间；无回复展示编辑区；AI 草稿文本域 min-height 提升至约 160-200px，按钮区适度下移不拥挤 | 动态（浏览器验收 + type-check/build） | 反馈闭环 AI 化 | 保持 | 已关闭 |
+| O-2 | 气泡助手全页面级推广与总览 AI 助手重设计 | `frontend/src/components/ai/AIFloatingAssistant.vue`（新增）、`AIChatPanel.vue`、各业务页面挂载点 | 已实现 | 除总览外全部业务页（反馈/洞察/路线图/政务/自动化/商务/访谈/工作流/Agent/资源）挂载带上下文感知的右下角气泡助手，每页预设问题按页面主题定制（如反馈页「批量生成待办回复」、洞察页「生成本周数据摘要」、政务页「热点诉求摘要」）；总览智能助手面板复用气泡助手结构（欢迎页/快捷入口/历史会话/Agent-Chat 切换/免责声明）+ 总览专属快捷指令（今日概览/异常提醒/自动化状态） | 动态（浏览器逐页验收 + type-check/build） | 全站 AI 入口统一 | 保持 | 已关闭 |
+| O-3 | 总览面板信息块补充与客户访谈接入 | `frontend/src/pages/dashboard/DashboardPage.vue`、`frontend/src/pages/interview/InterviewPage.vue`（新增）、`frontend/src/mocks/interviews.ts`、`frontend/src/api/interviews.ts`、`frontend/src/stores/interviews.ts` | 已实现 | 总览 Dashboard 扩展为全局运营驾驶舱：新增自动化任务运行状态、商务线索待跟进数、政务预警待处理数、Agent/工作流启用状态、资源健康概况等卡片；新增侧边栏「客户访谈」入口：IV-001~IV-006 访谈列表（录音/纪要/AI 提炼痛点与需求），访谈中识别合作意向自动汇入商务线索池、痛点自动匹配共性需求 | 动态（浏览器验收 IV-002 联动 + type-check/build） | 全局驾驶舱 + 商务联动 | 保持 | 已关闭 |
+| O-4 | Agent/Skill 配置中心与资源管理入口 | `frontend/src/pages/agents/AgentConfigPage.vue`、`frontend/src/pages/resources/ResourceMonitorPage.vue`（新增）、`frontend/src/mocks/{agents,resources}.ts`、`frontend/src/api/{agents,resources}.ts`、`frontend/src/stores/{agents,resources}.ts` | 已实现 | 侧边栏新增「Agent 配置」页：5 个预置 Agent 卡片（政策公告/商单回复/舆情聚类/邻里诉求/反馈自动回复），各含名称/类型/运行次数/场景/工具权限/绑定工作流/成功率/最近运行/配置开关与新建；「资源管理」页：服务器健康 3/4、数据库 2/3、API 13/14、活跃告警 5（最高严重），日志与告警 tab（含 milvus 向量检索延迟 WARN、report-service 导出失败 ERROR） | 动态（浏览器逐 tab 验收 + type-check/build） | 运维可观测 | 保持 | 已关闭 |
+| O-5 | LangGraph 工作流配置入口与闭环联动 | `frontend/src/pages/workflows/WorkflowConfigPage.vue`（新增）、`frontend/src/mocks/workflows.ts`、`frontend/src/api/workflows.ts`、`frontend/src/stores/workflows.ts` | 已实现 | 侧边栏新增「工作流配置」页：5 个预置模板（发布公告/商单自动回复/自动分类与去重/舆情监测与应急/多源诉求聚合解决），每卡片含描述/触发条件/LangGraph 节点流程图（开始→…→结束）/Agent 绑定/工具链/运行历史/状态开关；总览「启用全部工作流」开关真实映射工作流启用状态 | 动态（浏览器闭环验证 + type-check/build） | 编排可见可管 | 保持 | 已关闭 |
+| O-6 | 集成闭环联动与 store 守卫修复 | `frontend/src/stores/{workflows,agents,interviews}.ts`、`frontend/src/stores/ai.ts`（6 个 fetch 方法） | 已实现 | 修复页面 onMounted 无条件 fetch 覆盖用户配置的缺陷：给 4 个 store 的 9 个 fetch 方法加 `force=false` 守卫（已有数据跳过重取）；「总览开关→工作流配置页」状态镜像闭环（4/5→5/5 并保持）；「访谈→商务线索」联动闭环（IV-002 生成 BL-007 并置顶商务页线索池顶部） | 动态（SPA 内导航整链路验收 + type-check/build） | 会话内状态一致性 | 保持 | 已关闭 |
+
 ## 动态验证证据（前端页面切片验收 2026-10-14 首轮 + 2026-10-15 增补）
 
 | 检查项 | 命令/方式 | 结果 |
@@ -93,6 +104,18 @@
 | 扩展功能 Docker 集成（position 6） | `docker compose up -d --build`（FRONTEND_PORT=8088，因本机 8080 被 edunash-nginx 占用） | 四容器（postgres(pgvector)/redis/backend/frontend）全部 healthy；后端健康路由经 `curl http://localhost:8000/api/v1/healthz` 返回 `{"status":"ok","service":"signalflow-backend"}`；容器版 http://localhost:8088/gov 走查通过（6 统计卡 + 7 标签 + 四级预警徽章）；前端容器内全流程可操作 |
 | 后端健康路由确认（position 6） | `curl http://localhost:8000/healthz` vs `/api/v1/healthz` | 裸 `/healthz` 返回 404；实际健康路由为 `/api/v1/healthz`（`backend/app/api/v1/health.py`），compose 与 deploy/README 中过时注释已同步修正 |
 | 后端 gov 契约边界确认（position 6） | `curl http://localhost:8000/api/v1/gov/overview` | 返回 404（backend `router.py` 仅注册 health/feedbacks/insights/ai，未注册 gov 路由）；当前 mock 模式前端不依赖真实接口，真实 `/gov/overview` 契约列入下一阶段 |
+| 运营驾驶舱 type-check（O-1~O-6） | `npm run type-check`（frontend） | 通过（vue-tsc --noEmit，新增 agents/interviews/resources/workflows 页面与 store 后无类型错误） |
+| 运营驾驶舱生产构建（O-1~O-6） | `npm run build`（frontend） | 通过（vue-tsc --noEmit + vite build，`✓ built in 2.27s`，产物 dist/assets 正常） |
+| 详情抽屉回复可见性（O-1） | /feedback 打开多条详情抽屉 | 已回复条目展示完整回复文本与发送人/时间；AI 审核中条目展示 AI 草稿；AI 草稿文本域高度调高（min-height 约 160-200px），按钮区不拥挤 |
+| 气泡助手各页（O-2） | 反馈/洞察/路线图/政务/自动化/商务等页右下角 | 每页出现带上下文感知的悬浮气泡助手，预设问题随页面主题变化（反馈页「批量生成待办回复」、洞察页「生成本周数据摘要」、政务页「热点诉求摘要」等） |
+| 总览 AI 助手与快捷指令（O-2） | /dashboard 总览面板 | 智能助手面板含欢迎页/快捷入口/历史会话/Agent-Chat 切换/免责声明 + 今日概览/异常提醒/自动化状态快捷指令 |
+| 总览信息块（O-3） | /dashboard 浏览器验收 | 自动化任务运行状态、商务线索待跟进数、政务预警待处理数、Agent/工作流启用状态、资源健康概况等卡片渲染正常 |
+| 客户访谈页（O-3） | /interview 浏览器验收 | IV-001~IV-006 六条访谈记录（公司/联系人/渠道/时长/日期），含 AI 提炼痛点与需求；IV-002 中科软联高意向候选（数据不出域/私有化部署诉求） |
+| Agent 配置页（O-4） | /agents 浏览器验收 | 5 个预置 Agent 卡片（政策公告/商单回复/舆情聚类/邻里诉求/反馈自动回复），各含运行次数/场景/工具权限/绑定工作流/成功率/最近运行/配置开关；新建入口可用 |
+| 资源管理页（O-4） | /resources 浏览器验收 eval 逐 tab | 服务器健康 3/4、数据库 2/3、API 13/14、活跃告警 5（最高严重）；日志与告警 tab 内 10 条日志（milvus 向量检索延迟 WARN、report-service 导出失败 ERROR） |
+| 工作流配置页（O-5） | /workflows 浏览器验收 | 5 个预置模板（发布公告/商单自动回复/自动分类与去重/舆情监测与应急/多源诉求聚合解决），每卡片含描述/触发条件/节点流程图（开始→…→结束）/Agent 绑定/工具链/运行历史/状态开关 |
+| 总览开关→工作流状态镜像（O-6） | 整页刷新 `/` → 点总览「启用全部工作流」→ SPA 点侧栏 `/workflows` | 初始 4/5 → 点击总览开关变 5/5 → SPA 导航工作流页后「多源诉求聚合解决」从「已停用」保持「已启用」，状态镜像一致（store 守卫防覆盖生效） |
+| 访谈→商务线索联动（O-6） | 整页刷新 `/` → SPA `/interview` → 选 IV-002 → 「生成商务线索并汇入线索池」→ SPA `/business` | 访谈页显示「已生成商务线索 BL-007」；商务页「企业合作线索」列表顶部置顶出现 BL-007（中科软联/私有化与数据不出域诉求，客户价值 85、置信度 85%、带访谈来源引用，状态-待确认） |
 
 ### 重要结论：草稿回传「未回写」疑点澄清
 
@@ -103,16 +126,16 @@
 
 ## 通俗语言发现
 
-1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手；2026-10-15 进一步要求：反馈页行距与统计卡、气泡助手按参考图重构、详情抽屉展示回复且 AI 草稿可改、按优先级分阶段开发（UI 走查 → 气泡助手 → AI 自动化 → 商务洞察 → 政务扩展）。
-2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）已完成；2026-10-15 增补完成反馈统计卡与行距/导航修复、详情抽屉回复展示与 AI 草稿可改、气泡助手完整面板重构（欢迎页/快捷入口/历史会话/模式切换/免责声明）、AI 自动化流程（分类/去重合并/优先级规则）、商务洞察（线索/行业/动向/共性需求四面板）与政务统计扩展（6 统计卡 + 7 标签 + 四级预警）；`npm run type-check` + `npm run build` 通过，Docker compose 四容器 healthy（前端 8088）。
-3. **应该发生什么**：全部新增功能由 mock 数据驱动，前端可独立演示（不依赖真实后端）；真实后端 gov 契约（`/gov/overview`）与真实 LLM 接入、政务知识库对接属于下一阶段（见 `docs/next-stage-plan.md`）。
-4. **为什么差异重要**：统计卡让「待办/逾期/办结率」一眼可见；气泡助手与抽屉改造使 AI 草稿可人工干预，符合政企「AI 辅助 + 人工兜底」原则；AI 自动化与商务/政务扩展覆盖产品规划的推销联动与政务场景，增强演示完整性；mock 适配层保证后续接真实 LLM/知识库零改动。
-5. **证据与受影响边界**：FS-1~FS-7 与 E-1~E-5 全部页面交互闭环均有浏览器证据；type-check/build/容器部署（8088）通过；后端 AI 服务当前为 mock 实现，真实 LLM、政务知识库与后端 `/gov/overview` 合约未实施。
+1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手；2026-10-15 进一步要求：反馈页行距与统计卡、气泡助手按参考图重构、详情抽屉展示回复且 AI 草稿可改、按优先级分阶段开发（UI 走查 → 气泡助手 → AI 自动化 → 商务洞察 → 政务扩展）；随后要求把总览扩展为全局运营驾驶舱（自动化/线索/预警/Agent/工作流/资源健康）、新增客户访谈与商务联动、建立 Agent/Skill 配置中心与资源管理入口、提供 LangGraph 工作流配置入口并保证各功能闭环联动。
+2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）已完成；2026-10-15 增补完成反馈统计卡与行距/导航修复、详情抽屉回复展示与 AI 草稿可改、气泡助手完整面板重构（欢迎页/快捷入口/历史会话/模式切换/免责声明）、AI 自动化流程（分类/去重合并/优先级规则）、商务洞察（线索/行业/动向/共性需求四面板）与政务统计扩展（6 统计卡 + 7 标签 + 四级预警）；2026-10-15 二次增补完成运营驾驶舱扩展（详情抽屉回复可见性与 AI 草稿区调高、气泡助手全页面推广与总览 AI 助手重设计、总览信息块与客户访谈接入、Agent 配置中心与资源管理入口、LangGraph 工作流配置入口与三向闭环联动）并修复 mock 阶段 store 覆盖缺陷（4 store 9 个 fetch 方法加 force 守卫）；`npm run type-check` + `npm run build` 通过，Docker compose 四容器 healthy（前端 8088）。
+3. **应该发生什么**：全部新增功能由 mock 数据驱动，前端可独立演示（不依赖真实后端）；验收与演示必须使用 SPA 内导航而非整页刷新（整页刷新会重置 mock 内存态）；真实后端 gov 契约（`/gov/overview`）与真实 LLM 接入、政务知识库对接属于下一阶段（见 `docs/next-stage-plan.md`）。
+4. **为什么差异重要**：统计卡让「待办/逾期/办结率」一眼可见；气泡助手与抽屉改造使 AI 草稿可人工干预，符合政企「AI 辅助 + 人工兜底」原则；AI 自动化与商务/政务扩展覆盖产品规划的推销联动与政务场景，增强演示完整性；运营驾驶舱把自动化、线索、预警、Agent/工作流/资源健康统一到总览，配合工作流配置与访谈→线索联动形成「配置→执行→回显」闭环，演示叙事更完整；store 守卫修复保证会话内用户操作不被页面挂载重取覆盖，是 mock 阶段状态一致性的关键；mock 适配层保证后续接真实 LLM/知识库零改动。
+5. **证据与受影响边界**：FS-1~FS-7 与 E-1~E-5 及 O-1~O-6 全部页面交互闭环均有浏览器证据；type-check/build/容器部署（8088）通过；mock 阶段已知限制：整页刷新会重置 Pinia store 内存态，验收/演示须用 SPA 内导航；后端 AI 服务当前为 mock 实现，真实 LLM、政务知识库与后端 `/gov/overview` 合约未实施。
 6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流）、政务知识库对接（RAG 检索）与后端政务接口契约补齐，替换 mock 服务实现；本阶段成果已提交并推送至私有 GitHub 仓库。
 
 ## 评审覆盖与关闭标准
 
-- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证 + E-1~E-5 扩展功能（反馈 UI 与统计卡/详情抽屉与气泡助手/AI 自动化/商务洞察/政务统计扩展）的浏览器验收与 type-check/build/Docker 集成验证。
+- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证 + E-1~E-5 扩展功能（反馈 UI 与统计卡/详情抽屉与气泡助手/AI 自动化/商务洞察/政务统计扩展）的浏览器验收与 type-check/build/Docker 集成验证 + O-1~O-6 运营驾驶舱扩展（详情抽屉回复可见性/气泡助手全页面/总览信息块与客户访谈/Agent 配置/资源管理/工作流配置/集成闭环与 store 守卫）的浏览器验收与 type-check/build 验证。
 - 未检查的文件或边界：真实 LLM 接入与政务知识库对接（下一阶段）、后端 AI mock 服务在真实 FastAPI 运行时的手工 curl 验证（后端依赖未安装，契约以静态核对为准）、后端 `/gov/overview` 真实接口（未注册，属下一阶段契约补齐）。
 - 关闭前端规划项所需证据：切片实现完成后的浏览器可见验收（`docs/frontend-development-plan.md` §3.3）；文档本身的"已落盘"证据为文件存在与内容核对。
 - 最后检查版本或日期：2026-10-15。

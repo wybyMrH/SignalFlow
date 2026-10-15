@@ -12,7 +12,7 @@
  * - 工作流状态面板：实时展示 AI 处理中任务与进度
  * - 自动化扩展区：面向政企场景的预设规则开关与统计
  */
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AIAutomationRules from '@/components/ai/AIAutomationRules.vue'
@@ -24,22 +24,52 @@ import Skeleton from '@/components/common/Skeleton.vue'
 import StatCard from '@/components/common/StatCard.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import TrendChart from '@/components/common/TrendChart.vue'
+import { fetchGovOverview } from '@/api/gov'
+import { fetchResourceHealth } from '@/api/interviews'
+import { useAgentsStore } from '@/stores/agents'
+import { useAIStore } from '@/stores/ai'
 import { useFeedbackStore } from '@/stores/feedback'
 import { useInsightsStore } from '@/stores/insights'
+import { useWorkflowsStore } from '@/stores/workflows'
 import { formatDateTime } from '@/utils'
 import { sourceLabels } from '@/utils/labels'
+import type { GovOverview, ResourceHealth } from '@/types'
 
 const router = useRouter()
 const insights = useInsightsStore()
 const feedback = useFeedbackStore()
+const ai = useAIStore()
+const agents = useAgentsStore()
+const workflows = useWorkflowsStore()
 
 const metrics = computed(() => insights.metrics)
 const topTopics = computed(() => insights.dashboard?.items.slice(0, 5) ?? [])
+
+/** 运营驾驶舱：跨模块状态数据 */
+const govOverview = ref<GovOverview | null>(null)
+const resource = ref<ResourceHealth | null>(null)
+const followUpLeads = computed(() => ai.businessLeads.filter((l) => l.stage !== 'pushed').length)
+const pendingGovAlerts = computed(() => govOverview.value?.alerts.filter((a) => !a.dispatched).length ?? 0)
+const highAlerts = computed(() => govOverview.value?.alerts.filter((a) => a.level === 'orange' || a.level === 'red').length ?? 0)
+const enabledRules = computed(() => ai.rules.filter((r) => r.enabled).length)
+/** 工作流总开关：是否全部启用（映射到工作流配置页真实状态） */
+const allWorkflowsOn = computed(() => workflows.details.length > 0 && workflows.enabled.length === workflows.details.length)
+
+function toggleAllWorkflows() {
+  workflows.toggleAll(!allWorkflowsOn.value)
+}
 
 onMounted(() => {
   void insights.fetchMetrics()
   void insights.fetchDashboard()
   void feedback.fetchPending(6)
+  void ai.fetchRules()
+  void ai.fetchBusinessLeadsList()
+  void ai.fetchAutomationSummaryData()
+  void agents.fetchAll()
+  void workflows.fetchAll()
+  void fetchGovOverview().then((d) => (govOverview.value = d))
+  void fetchResourceHealth().then((d) => (resource.value = d))
 })
 
 function goFeedback(status?: string) {
@@ -48,6 +78,10 @@ function goFeedback(status?: string) {
 
 function goInsights() {
   void router.push('/insights')
+}
+
+function go(path: string) {
+  void router.push(path)
 }
 
 const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'warning' : score >= 55 ? 'info' : 'neutral') as 'danger' | 'warning' | 'info' | 'neutral'
@@ -131,6 +165,98 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
         <AIChatPanel />
       </div>
     </div>
+
+    <!-- 运营驾驶舱：跨模块状态速览与配置入口 -->
+    <section class="ops-grid">
+      <article class="ops-card">
+        <div class="ops-head">
+          <span class="ops-title"><SfIcon name="automation" :size="14" /> 自动化任务</span>
+          <button type="button" class="ops-link" @click="go('/automation')">管理 <SfIcon name="chevron-right" :size="12" /></button>
+        </div>
+        <div class="ops-main">{{ ai.automationSummary?.classified_count ?? '—' }}</div>
+        <div class="ops-label">今日自动分类</div>
+        <div class="ops-meta">
+          <span>待审核 {{ ai.automationSummary?.review_queue_count ?? '—' }}</span>
+          <span>自动升级 {{ ai.automationSummary?.auto_escalated_count ?? '—' }}</span>
+          <span>运行中 {{ ai.runningWorkflows.length }}</span>
+        </div>
+      </article>
+
+      <article class="ops-card">
+        <div class="ops-head">
+          <span class="ops-title"><SfIcon name="briefcase" :size="14" /> 商务线索</span>
+          <button type="button" class="ops-link" @click="go('/business')">商务洞察 <SfIcon name="chevron-right" :size="12" /></button>
+        </div>
+        <div class="ops-main">{{ followUpLeads }}</div>
+        <div class="ops-label">线索待跟进（未推送）</div>
+        <div class="ops-meta">
+          <span>总线索 {{ ai.businessSummary?.total_leads ?? ai.businessLeads.length }}</span>
+          <span>已推送 {{ ai.businessSummary?.pushed_leads ?? '—' }}</span>
+          <span>共性需求 {{ ai.businessSummary?.common_need_count ?? '—' }}</span>
+        </div>
+      </article>
+
+      <article class="ops-card">
+        <div class="ops-head">
+          <span class="ops-title"><SfIcon name="gov" :size="14" /> 政务预警</span>
+          <button type="button" class="ops-link" @click="go('/gov')">政务适配 <SfIcon name="chevron-right" :size="12" /></button>
+        </div>
+        <div class="ops-main" :style="pendingGovAlerts > 0 ? { color: 'var(--sf-warning)' } : {}">{{ pendingGovAlerts }}</div>
+        <div class="ops-label">预警待派发</div>
+        <div class="ops-meta">
+          <span>待办诉求 {{ govOverview?.summary.pending_count ?? '—' }}</span>
+          <span>超期 {{ govOverview?.summary.overdue_count ?? '—' }}</span>
+          <span>橙红预警 {{ highAlerts }}</span>
+        </div>
+      </article>
+
+      <article class="ops-card">
+        <div class="ops-head">
+          <span class="ops-title"><SfIcon name="agent" :size="14" /> Agent 与工作流</span>
+          <span class="ops-links">
+            <button type="button" class="ops-link" @click="go('/agents')">Agent <SfIcon name="chevron-right" :size="12" /></button>
+            <button type="button" class="ops-link" @click="go('/workflows')">工作流 <SfIcon name="chevron-right" :size="12" /></button>
+          </span>
+        </div>
+        <div class="ops-main">{{ agents.enabledAgents.length }}<span class="ops-unit">/{{ agents.agents.length }}</span></div>
+        <div class="ops-label">已启用 Agent</div>
+        <div class="ops-meta">
+          <span>已启用工作流 {{ workflows.enabled.length }}/{{ workflows.details.length }}</span>
+          <span>运行中 {{ workflows.running.length }}</span>
+          <span>启用规则 {{ enabledRules }}</span>
+        </div>
+        <div class="ops-foot">
+          <span class="ops-hint">
+            <SfIcon name="workflow" :size="12" /> 工作流总开关
+            <span class="ops-hint-sub">{{ allWorkflowsOn ? '全部启用' : '部分/未启用' }}</span>
+          </span>
+          <button
+            type="button"
+            class="switch"
+            :class="{ on: workflows.enabled.length > 0 }"
+            :title="allWorkflowsOn ? '停用全部工作流（映射到工作流配置页）' : '启用全部工作流（映射到工作流配置页）'"
+            @click="toggleAllWorkflows"
+          >
+            <span class="knob" />
+          </button>
+        </div>
+      </article>
+
+      <article class="ops-card">
+        <div class="ops-head">
+          <span class="ops-title"><SfIcon name="server" :size="14" /> 资源健康</span>
+          <button type="button" class="ops-link" @click="go('/resources')">资源管理 <SfIcon name="chevron-right" :size="12" /></button>
+        </div>
+        <div class="ops-main">{{ resource ? `${resource.server_healthy}/${resource.server_count}` : '—' }}</div>
+        <div class="ops-label">服务节点健康</div>
+        <div class="ops-meta">
+          <span>数据库 {{ resource?.db_status === 'healthy' ? '正常' : resource?.db_status ?? '—' }}</span>
+          <span>API {{ resource ? `${resource.api_healthy}/${resource.api_total}` : '—' }}</span>
+          <span v-if="resource?.alert_count">告警 {{ resource.alert_count }}</span>
+          <span v-else>无告警</span>
+        </div>
+      </article>
+    </section>
 
     <!-- 底部：AI 工作流状态 -->
     <AIWorkflowStatus />
@@ -301,6 +427,141 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   color: var(--sf-text-faint);
 }
 
+/* 运营驾驶舱：跨模块状态卡 */
+.ops-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--sf-space-3);
+}
+.ops-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  box-shadow: var(--sf-shadow);
+  padding: var(--sf-space-3) var(--sf-space-4);
+  min-width: 0;
+}
+.ops-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-2);
+  margin-bottom: 6px;
+}
+.ops-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.ops-title :deep(svg) {
+  color: var(--sf-primary);
+  flex-shrink: 0;
+}
+.ops-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--sf-primary);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+.ops-link:hover {
+  text-decoration: underline;
+}
+.ops-links {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.ops-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+.ops-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sf-font-11);
+  color: var(--sf-text-secondary);
+  min-width: 0;
+}
+.ops-hint-sub {
+  color: var(--sf-text-faint);
+}
+
+/* 开关 */
+.switch {
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border: none;
+  border-radius: 11px;
+  background: var(--sf-border);
+  cursor: pointer;
+  transition: background 0.18s ease;
+  flex-shrink: 0;
+}
+.switch.on {
+  background: var(--sf-primary);
+}
+.switch .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.18s ease;
+  box-shadow: 0 1px 3px rgba(2, 6, 23, 0.25);
+}
+.switch.on .knob {
+  left: 18px;
+}
+.ops-main {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--sf-text);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.ops-unit {
+  font-size: var(--sf-font-13);
+  font-weight: 500;
+  color: var(--sf-text-faint);
+}
+.ops-label {
+  font-size: var(--sf-font-12);
+  color: var(--sf-text-faint);
+}
+.ops-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 10px;
+  margin-top: 6px;
+  border-top: 1px dashed var(--sf-border);
+  padding-top: 6px;
+  font-size: var(--sf-font-11);
+  color: var(--sf-text-secondary);
+  line-height: 1.4;
+}
+
 /* 响应式 */
 @media (max-width: 1200px) {
   .main-grid {
@@ -316,10 +577,16 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   .duo {
     grid-template-columns: 1fr;
   }
+  .ops-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 @media (max-width: 640px) {
   .kpi-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ops-grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 }
 </style>

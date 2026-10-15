@@ -531,3 +531,249 @@ export interface BusinessInsightSummary {
   report_period: string
   generated_at: string
 }
+
+/** 客户访谈状态：已预约 → 已完成记录 → AI 已提炼 → 已联动（生成线索/关联反馈） */
+export type InterviewStatus = 'scheduled' | 'recorded' | 'extracted' | 'linked'
+
+/** 访谈来源渠道 */
+export type InterviewSource = '电话' | '视频会议' | '现场走访' | '展会'
+
+/** AI 提炼结论（从访谈纪要与录音转写中理解） */
+export interface InterviewExtraction {
+  pain_points: string[]
+  needs: string[]
+  /** 合作意向：高/中/低 */
+  cooperation_intent: 'high' | 'medium' | 'low'
+  /** 匹配到的共性需求标题 */
+  matched_needs: string[]
+  /** 是否具备生成商务线索的语义条件 */
+  lead_candidate: boolean
+  lead_reason: string
+  extracted_at: string
+}
+
+/** 客户访谈记录 */
+export interface InterviewRecord {
+  id: string
+  company_name: string
+  company_type: string
+  industry: string
+  contact_name: string
+  contact_role: string
+  interview_date: string
+  duration_min: number
+  source: InterviewSource
+  status: InterviewStatus
+  /** 结构化纪要摘要 */
+  summary: string
+  key_points: string[]
+  extraction?: InterviewExtraction
+  /** 已关联的反馈编号 */
+  linked_feedback_ids: string[]
+  /** 已生成的商务线索编号 */
+  linked_lead_id?: string
+  recorder: string
+}
+
+/** 客户访谈总览统计 */
+export interface InterviewSummary {
+  total: number
+  scheduled: number
+  recorded: number
+  extracted: number
+  pending_extraction: number
+  lead_candidates: number
+  generated_leads: number
+  matched_needs_count: number
+  total_duration_min: number
+}
+
+/** 资源健康概况（总览驾驶舱展示用，后续资源管理页复用） */
+export interface ResourceHealth {
+  ok: boolean
+  server_count: number
+  server_healthy: number
+  db_status: 'healthy' | 'degraded' | 'down'
+  db_connections: number
+  api_healthy: number
+  api_total: number
+  error_rate: number
+  alert_count: number
+  updated_at: string
+}
+
+/** 预置 Agent 定义（总览驾驶舱与 Agent 配置中心共用） */
+export interface AgentStatus {
+  id: string
+  name: string
+  /** 业务分类：内容生成/回复生成/分析研判/诉求处置等 */
+  category: string
+  /** 适用场景说明 */
+  scenario: string
+  enabled: boolean
+  /** 已授权可调用的工具名 */
+  tools: string[]
+  /** 已绑定到的工作流 ID（LangGraph 工作流节点指派，可空） */
+  bound_workflow_ids: string[]
+  /** 近 30 天执行次数 */
+  run_count: number
+  /** 成功率 0-100 */
+  reliability: number
+  last_run_at?: string
+  /** 预置（不可删除）还是用户新建 */
+  preset: boolean
+}
+
+/** Agent 可配置工具的目录项（Agent 配置中心「配置工具」抽屉用） */
+export interface AgentToolDef {
+  key: string
+  name: string
+  /** 工具类别：检索/生成/分析/派单/通知等 */
+  category: string
+  /** 功能说明与可调用场景 */
+  description: string
+}
+
+/** 工作流目录项（Agent 配置中心绑定工作流；与工作流配置页共用） */
+export interface WorkflowCatalogItem {
+  id: string
+  name: string
+  description: string
+}
+
+/** Skill 定义（Agent/Skill 配置中心）：可被 Agent 加载的领域能力包 */
+export interface SkillDef {
+  id: string
+  name: string
+  /** 领域：政务/商务/分析/回复/诉求处置 等 */
+  category: string
+  description: string
+  enabled: boolean
+  /** 已挂载该 Skill 的 Agent ID */
+  owner_agent_ids: string[]
+}
+
+/** 服务器节点状态（资源管理页） */
+export interface ServerState {
+  id: string
+  name: string
+  /** 角色：API 网关 / 应用服务 / 任务调度 / 模型推理 等 */
+  role: string
+  cpu: number
+  mem: number
+  disk: number
+  /** 1/5/15 分钟负载（逗号分隔字符串展示） */
+  load: string
+  uptime: string
+  status: 'healthy' | 'warning' | 'down'
+}
+
+/** 数据库实例状态（资源管理页） */
+export interface DatabaseState {
+  id: string
+  name: string
+  engine: string
+  status: 'healthy' | 'degraded' | 'down'
+  connections: number
+  max_connections: number
+  slow_queries: number
+  tablespace_pct: number
+  last_check: string
+}
+
+/** API 端点状态（资源管理页） */
+export interface ApiEndpointState {
+  id: string
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+  path: string
+  status: 'healthy' | 'degraded' | 'down'
+  /** 平均响应时间 ms */
+  response_ms: number
+  /** 错误率 0-100 */
+  error_rate: number
+  /** 每秒请求数 */
+  rps: number
+}
+
+/** 系统日志条目（资源管理页） */
+export interface SystemLogEntry {
+  id: string
+  time: string
+  level: 'info' | 'warn' | 'error'
+  module: string
+  message: string
+}
+
+/** 资源告警（资源管理页 & 总览资源健康卡联动） */
+export interface ResourceAlert {
+  id: string
+  level: 'error' | 'warn' | 'info'
+  title: string
+  time: string
+  target: string
+}
+
+/** 资源管理详情聚合（服务器/数据库/API/日志/告警，mock 驱动） */
+export interface ResourceDetail {
+  servers: ServerState[]
+  databases: DatabaseState[]
+  apis: ApiEndpointState[]
+  logs: SystemLogEntry[]
+  alerts: ResourceAlert[]
+  updated_at: string
+}
+
+/** LangGraph 风格工作流节点 */
+export interface WorkflowNode {
+  id: string
+  name: string
+  /** 节点类型：start / agent / tool / decision / end */
+  type: 'start' | 'agent' | 'tool' | 'decision' | 'end'
+  /** 当前节点绑定的 Agent ID（agent 节点） */
+  agent_id?: string
+  /** 当前节点可调用的工具 key 列表（tool 节点） */
+  tool_keys?: string[]
+  /** 节点运行状态 */
+  status?: 'idle' | 'running' | 'success' | 'error'
+  /** 节点描述 */
+  description?: string
+}
+
+/** 工作流边（状态转移） */
+export interface WorkflowEdge {
+  from: string
+  to: string
+  /** 条件标签（decision 分支） */
+  condition?: string
+}
+
+/** 工作流运行记录 */
+export interface WorkflowRun {
+  id: string
+  started_at: string
+  ended_at?: string
+  /** 运行状态 */
+  status: 'running' | 'success' | 'failed' | 'cancelled'
+  /** 运行结果摘要 */
+  output_summary?: string
+  /** 异常信息 */
+  error_message?: string
+}
+
+/** 工作流详情（LangGraph 工作流配置页） */
+export interface WorkflowDetail extends WorkflowCatalogItem {
+  enabled: boolean
+  /** 触发条件：定时 / 事件 / 手动 */
+  trigger: string
+  /** 节点图 */
+  nodes: WorkflowNode[]
+  edges: WorkflowEdge[]
+  /** Agent 绑定映射：节点 ID → Agent ID */
+  agent_bindings: Record<string, string>
+  /** 工具链：节点 ID → 工具 key 列表 */
+  tool_chain: Record<string, string[]>
+  /** 近 30 天运行历史 */
+  history: WorkflowRun[]
+  /** 上次更新时间 */
+  updated_at: string
+}

@@ -18,8 +18,12 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/insights', label: '洞察与决策', icon: 'insights' },
   { to: '/roadmap', label: '路线图', icon: 'roadmap' },
   { to: '/automation', label: 'AI 自动化', icon: 'automation' },
+  { to: '/workflows', label: '工作流配置', icon: 'workflow' },
   { to: '/business', label: '商务洞察', icon: 'briefcase' },
+  { to: '/interview', label: '客户访谈', icon: 'mic' },
   { to: '/gov', label: '政务适配', icon: 'gov' },
+  { to: '/agents', label: 'Agent 配置', icon: 'agent' },
+  { to: '/resources', label: '资源管理', icon: 'server' },
   { to: '/settings', label: '系统设置', icon: 'settings' },
 ]
 </script>
@@ -113,6 +117,11 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   width: 100%;
   align-items: center;
   flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.nav::-webkit-scrollbar {
+  display: none;
 }
 
 .nav-item {

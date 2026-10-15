@@ -7,6 +7,7 @@
  */
 import { onMounted, ref } from 'vue'
 
+import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import BarRow from '@/components/common/BarRow.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
@@ -384,6 +385,8 @@ onMounted(async () => {
       </table>
     </div>
   </div>
+
+  <AIFloatingAssistant context="gov" />
 </template>
 
 <style scoped>

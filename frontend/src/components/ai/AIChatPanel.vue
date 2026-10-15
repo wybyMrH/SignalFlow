@@ -1,8 +1,8 @@
 <script setup lang="ts">
 /**
- * AI 对话面板：常驻侧边/可折叠的 AI 助手。
- * 参考 Ant Design X / Page Assist 的 RICH 交互范式：
- * 气泡对话 + 快捷提示词 + 发送器 + 引用来源展示。
+ * AI 总览助手面板（重设计版）。
+ * 参照浮动气泡助手（AIFloatingAssistant）结构：欢迎页 + 功能分类快捷入口 + 快捷指令 + 历史会话 + 助手/对话模式切换 + 免责声明。
+ * 总览专属快捷指令：今日概览 / 异常提醒 / 自动化任务运行状态 / 客户访谈与合作意向。
  */
 import { nextTick, onMounted, ref, watch } from 'vue'
 
@@ -10,16 +10,26 @@ import SfIcon from '@/components/common/SfIcon.vue'
 import { useAIStore } from '@/stores/ai'
 
 const ai = useAIStore()
+const mode = ref<'home' | 'chat'>('home')
 const input = ref('')
 const scrollRef = ref<HTMLDivElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 
-const quickPrompts = [
-  '今天工单情况如何？',
-  '最近有什么高频问题？',
-  '自动回复怎么配置？',
-  '大厅排队怎么解决？',
+/** 总览专属功能分类快捷入口 */
+const categories = [
+  { label: '今日概览', icon: 'chart' },
+  { label: '异常提醒', icon: 'alert' },
+  { label: '自动化状态', icon: 'magic' },
+  { label: '待办反馈', icon: 'checklist' },
+  { label: '洞察摘要', icon: 'trend-up' },
+  { label: '工作流', icon: 'refresh' },
 ]
+
+/** 总览专属快捷指令 */
+const shortcuts = ['今日概览', '异常提醒', '自动化任务运行状态', '客户访谈与合作意向']
+
+/** 历史会话（本地会话记录） */
+const history = ref<Array<{ title: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }>>([])
 
 function scrollToBottom() {
   nextTick(() => {
@@ -34,16 +44,37 @@ onMounted(() => {
   scrollToBottom()
 })
 
-async function submit() {
-  const q = input.value.trim()
-  if (!q || ai.chatLoading) return
+async function sendMessage() {
+  const text = input.value.trim()
+  if (!text || ai.chatLoading) return
+  mode.value = 'chat'
   input.value = ''
-  await ai.sendMessage(q)
+  await ai.sendMessage(text)
+  // 记录为历史会话
+  const title = text.length > 18 ? `${text.slice(0, 18)}…` : text
+  const msgs = ai.messages.slice(-4).map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }))
+  const existing = history.value.findIndex((h) => h.title === title)
+  const entry = { title, messages: msgs }
+  if (existing >= 0) history.value[existing] = entry
+  else history.value.unshift(entry)
+  if (history.value.length > 8) history.value.length = 8
 }
 
-function usePrompt(p: string) {
-  input.value = p
-  inputRef.value?.focus()
+function openHistory(idx: number) {
+  const h = history.value[idx]
+  if (!h) return
+  ai.messages = h.messages.map((m, i) => ({
+    id: `msg-h-${idx}-${i}`,
+    role: m.role,
+    content: m.content,
+    timestamp: new Date().toISOString(),
+  }))
+  mode.value = 'chat'
+}
+
+function usePrompt(text: string) {
+  input.value = text
+  void sendMessage()
 }
 </script>
 
@@ -64,7 +95,50 @@ function usePrompt(p: string) {
       </div>
     </div>
 
-    <div ref="scrollRef" class="ai-messages">
+    <!-- 欢迎页（助手首页） -->
+    <div v-if="mode === 'home'" class="ai-home">
+      <div class="ai-welcome">
+        <div class="ai-welcome-title">您好，欢迎使用总览助手</div>
+        <p class="ai-welcome-sub">我可以帮您查看今日概览、异常提醒或自动化任务运行状态，汇总全局运营情况。</p>
+      </div>
+
+      <div class="ai-categories">
+        <button
+          v-for="c in categories"
+          :key="c.label"
+          type="button"
+          class="ai-category"
+          @click="usePrompt(c.label)"
+        >
+          <SfIcon :name="c.icon as any" :size="16" />
+          <span>{{ c.label }}</span>
+        </button>
+      </div>
+
+      <div class="ai-shortcuts">
+        <button v-for="s in shortcuts" :key="s" type="button" class="ai-shortcut" @click="usePrompt(s)">
+          # {{ s }}
+        </button>
+      </div>
+
+      <div v-if="history.length" class="ai-history">
+        <div class="ai-history-label">最近会话</div>
+        <button
+          v-for="(h, i) in history"
+          :key="h.title"
+          type="button"
+          class="ai-history-item"
+          @click="openHistory(i)"
+        >
+          <SfIcon name="chat" :size="12" />
+          <span class="ai-history-title">{{ h.title }}</span>
+          <SfIcon name="chevron-right" :size="12" class="ai-history-arrow" />
+        </button>
+      </div>
+    </div>
+
+    <!-- 对话页 -->
+    <div v-else ref="scrollRef" class="ai-messages">
       <div
         v-for="msg in ai.messages"
         :key="msg.id"
@@ -90,30 +164,33 @@ function usePrompt(p: string) {
       </div>
     </div>
 
-    <div class="ai-prompts">
-      <button
-        v-for="p in quickPrompts"
-        :key="p"
-        type="button"
-        class="prompt-chip"
-        @click="usePrompt(p)"
-      >
-        {{ p }}
-      </button>
-    </div>
-
+    <!-- 输入区 -->
     <div class="ai-input-bar">
       <input
         ref="inputRef"
         v-model="input"
         type="text"
         class="ai-input"
-        placeholder="输入问题，例如「今天工单情况如何」..."
-        @keydown.enter="submit"
+        placeholder="输入问题，例如「今日概览」..."
+        @keydown.enter="sendMessage"
       />
-      <button type="button" class="ai-send" :disabled="!input.trim() || ai.chatLoading" @click="submit">
+      <button type="button" class="ai-send" :disabled="!input.trim() || ai.chatLoading" @click="sendMessage">
         <SfIcon name="send" :size="16" />
       </button>
+    </div>
+
+    <!-- 助手 / 对话模式切换 -->
+    <div class="ai-mode-bar">
+      <button type="button" class="ai-mode-btn" :class="{ active: mode === 'home' }" @click="mode = 'home'">
+        <SfIcon name="magic" :size="12" /> 助手
+      </button>
+      <button type="button" class="ai-mode-btn" :class="{ active: mode === 'chat' }" @click="mode = 'chat'">
+        <SfIcon name="chat" :size="12" /> 对话
+      </button>
+    </div>
+
+    <div class="ai-disclaimer">
+      内容由 AI 生成，仅供参考，您据此所作判断及操作均由您自行承担责任。
     </div>
   </div>
 </template>
@@ -132,6 +209,7 @@ function usePrompt(p: string) {
   padding: var(--sf-space-3) var(--sf-space-4);
   border-bottom: 1px solid var(--sf-border);
   background: linear-gradient(135deg, var(--sf-primary-soft) 0%, transparent 100%);
+  flex-shrink: 0;
 }
 .ai-title {
   display: flex;
@@ -168,6 +246,118 @@ function usePrompt(p: string) {
   display: inline-block;
 }
 
+/* 欢迎页 */
+.ai-home {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sf-space-3) var(--sf-space-4);
+  display: flex;
+  flex-direction: column;
+}
+.ai-welcome {
+  text-align: center;
+  margin-bottom: var(--sf-space-3);
+}
+.ai-welcome-title {
+  font-size: var(--sf-font-16);
+  font-weight: 600;
+  color: var(--sf-text);
+  margin-bottom: 6px;
+}
+.ai-welcome-sub {
+  margin: 0;
+  font-size: var(--sf-font-13);
+  color: var(--sf-text-secondary);
+  line-height: 1.5;
+}
+.ai-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sf-space-2);
+  margin-bottom: var(--sf-space-3);
+}
+.ai-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sf-space-2) var(--sf-space-1);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ai-category:hover {
+  border-color: var(--sf-primary-border);
+  background: var(--sf-primary-soft);
+}
+.ai-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--sf-space-3);
+}
+.ai-shortcut {
+  text-align: left;
+  padding: 6px var(--sf-space-2);
+  border: none;
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-bg);
+  color: var(--sf-primary);
+  font-size: var(--sf-font-13);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ai-shortcut:hover {
+  background: var(--sf-primary-soft);
+}
+.ai-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--sf-space-2);
+  border-top: 1px solid var(--sf-border);
+  padding-top: var(--sf-space-2);
+}
+.ai-history-label {
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-text-secondary);
+  margin-bottom: 4px;
+}
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px var(--sf-space-2);
+  border: none;
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text-secondary);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ai-history-item:hover {
+  background: var(--sf-primary-soft);
+  color: var(--sf-primary);
+}
+.ai-history-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-history-arrow {
+  color: var(--sf-text-faint);
+}
+
+/* 对话页 */
 .ai-messages {
   flex: 1;
   overflow-y: auto;
@@ -175,6 +365,7 @@ function usePrompt(p: string) {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-3);
+  min-height: 120px;
 }
 .msg {
   display: flex;
@@ -221,7 +412,6 @@ function usePrompt(p: string) {
   font-size: var(--sf-font-11);
   color: var(--sf-text-faint);
 }
-
 .typing {
   display: flex;
   align-items: center;
@@ -242,35 +432,13 @@ function usePrompt(p: string) {
   30% { transform: translateY(-4px); opacity: 1; }
 }
 
-.ai-prompts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sf-space-2);
-  padding: var(--sf-space-2) var(--sf-space-3);
-  border-top: 1px solid var(--sf-border);
-}
-.prompt-chip {
-  padding: 4px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--sf-border);
-  background: var(--sf-bg);
-  color: var(--sf-text-secondary);
-  font-size: var(--sf-font-12);
-  cursor: pointer;
-  transition: all 0.15s;
-  white-space: nowrap;
-}
-.prompt-chip:hover {
-  border-color: var(--sf-primary-border);
-  color: var(--sf-primary);
-  background: var(--sf-primary-soft);
-}
-
+/* 输入区 */
 .ai-input-bar {
   display: flex;
   gap: var(--sf-space-2);
-  padding: var(--sf-space-3);
+  padding: var(--sf-space-2) var(--sf-space-3);
   border-top: 1px solid var(--sf-border);
+  flex-shrink: 0;
 }
 .ai-input {
   flex: 1;
@@ -300,4 +468,39 @@ function usePrompt(p: string) {
 }
 .ai-send:hover:not(:disabled) { opacity: 0.85; }
 .ai-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 模式切换 */
+.ai-mode-bar {
+  display: flex;
+  gap: var(--sf-space-2);
+  padding: 0 var(--sf-space-3) var(--sf-space-2);
+  flex-shrink: 0;
+}
+.ai-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  background: var(--sf-surface);
+  color: var(--sf-text-secondary);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+}
+.ai-mode-btn.active {
+  border-color: var(--sf-primary);
+  color: var(--sf-primary);
+  background: var(--sf-primary-soft);
+}
+.ai-disclaimer {
+  padding: 6px var(--sf-space-3);
+  font-size: 11px;
+  color: var(--sf-text-faint);
+  text-align: center;
+  border-top: 1px solid var(--sf-border);
+  background: var(--sf-bg);
+  line-height: 1.4;
+  flex-shrink: 0;
+}
 </style>

@@ -6,6 +6,7 @@
  */
 import { computed, onMounted, reactive, ref } from 'vue'
 
+import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import Drawer from '@/components/common/Drawer.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
@@ -203,6 +204,8 @@ async function draftAction(draftId: string, to: DraftStatus) {
       </form>
     </Drawer>
   </div>
+
+  <AIFloatingAssistant context="roadmap" />
 </template>
 
 <style scoped>

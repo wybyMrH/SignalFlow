@@ -7,7 +7,7 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import pool
 
 from app.core.config import settings
 from app.core.database import Base
@@ -41,9 +41,9 @@ def run_migrations_offline() -> None:
 
 def run_migrations_online() -> None:
     """在线模式：连接数据库执行迁移。"""
-    connectable = engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
+    from sqlalchemy import create_engine
+    connectable = create_engine(
+        config.get_main_option("sqlalchemy.url"),
         poolclass=pool.NullPool,
     )
 

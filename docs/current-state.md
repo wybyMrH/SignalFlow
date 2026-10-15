@@ -1,13 +1,13 @@
 # 当前状态记录
 
-文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架）
+文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架 + 反馈 UI 与统计卡修复/详情抽屉与气泡助手重构/AI 自动化流程/商务洞察/政务统计扩展）
 
 ## 评审范围
 
 - 需求或任务：在 E:\code\interview\SignalFlow 搭建 SignalFlow 客户反馈决策工具的工程骨架（已完成）；随后按用户要求进入**前端阶段——用模拟数据把前端从入口按业务需求与功能切片推进，先以文档落盘计划/需求/技术参考，再实现可演示闭环**（本记录当前聚焦前端阶段）。
-- 评审日期：2026-10-14
-- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据。
-- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供）。
+- 评审日期：2026-10-15
+- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据；E-1~E-5 扩展功能（反馈统计卡/详情抽屉与气泡助手重构/AI 自动化/商务洞察/政务统计扩展）实现与浏览器验收证据。
+- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架，以及 2026-10-15 增补的反馈 UI 与统计卡修复、详情抽屉与气泡助手重构、AI 自动化流程、商务合作信息提炼与政务统计扩展；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供；真实后端 `/gov/overview` 契约亦属后续阶段）。
 
 ## 骨架阶段已关闭项（沿用首次评审）
 
@@ -45,7 +45,17 @@
 | A-6 | AI Mock 后端工作流骨架 | `backend/app/schemas/ai.py`、`backend/app/services/ai.py`、`backend/app/api/v1/ai.py`、`backend/app/api/v1/router.py` | 已实现 | 后端 AI 路由契约：GET /api/v1/ai/workflows；GET /api/v1/ai/automation-rules；POST /api/v1/ai/chat；GET /api/v1/ai/chat/welcome；POST /api/v1/ai/reply-draft；POST /api/v1/ai/reply-suggestion；POST /api/v1/ai/auto-approve/{feedback_id}；AIService 提供 mock 实现（工作流/规则/对话/回复生成/建议/自动审批），预留真实 LLM 与知识库替换点 | 静态（契约文件 + 与前端 api/ai.ts 逐接口核对一致） | 后端 AI 接入点 | 下一阶段替换为真实 LiteLLM/知识库实现 | 已关闭 |
 | A-7 | AI 功能整体集成验证与容器部署 | `frontend` 构建 + `deploy/docker-compose.yml` | 已实现 | `npm run type-check` 通过（修复 SfIcon `message`→`chat` 类型错误）；`npm run build` 通过（1.35s）；Docker frontend 容器重建 healthy，最新 dist 部署至 http://localhost:8090 | 动态（type-check/build/容器走查） | 交付演示 | 保持 | 已关闭 |
 
-## 动态验证证据（前端页面切片验收，2026-10-14）
+## 扩展功能阶段当前项（2026-10-15 增补）
+
+| ID | 需求或契约点 | 文件/模块/边界 | 分类 | 观察行为 | 证据等级 | 影响 | 建议处理 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| E-1 | 反馈管理页 UI 与统计卡修复 | `frontend/src/pages/feedback/FeedbackListPage.vue`、`frontend/src/mocks/feedbackDb.ts`（聚合统计） | 已实现 | 反馈列表行间距与密度调整避免视觉密集；顶部新增状态统计卡（待解决 / AI 已生成 / AI 已自动回复 / 已解决等）；左侧导航条加宽、字号与布局调整消除「洞察与决策」等标签换行 | 动态（浏览器验收 type-check/build） | 可读性/信息密度 | 保持 | 已关闭 |
+| E-2 | 详情抽屉与气泡助手重构 | `frontend/src/pages/feedback/FeedbackListPage.vue`、`frontend/src/components/ai/AIAssistantPanel.vue`、`frontend/src/components/ai/AIAnswerBubble.vue` | 已实现 | 详情抽屉补充回复内容展示（含 AI 草稿），非 AI 审批场景下支持人工修改 AI 草稿；右下角气泡助手按 image(4) 参考重构为完整 AI 助手面板：欢迎页 + 功能分类快捷入口 + 历史会话 + Agent/Chat 模式切换 + 免责声明，同时支持单条意见回复建议生成与自由聊天 | 动态（浏览器验收 + type-check/build） | 反馈闭环 AI 化 | 保持 | 已关闭 |
+| E-3 | AI 自动化流程（重复工作自动处理） | `frontend/src/pages/automation/AutomationPage.vue`（或等价入口面板）、`frontend/src/stores/`、配置规则数据 | 已实现 | 基于产品规划实现重复性工作场景的 AI 自动化流程：自动分类、自动去重合并相似反馈、自动优先级升降级规则配置与执行面板，融入反馈管理或独立自动化入口，侧边栏提供入口 | 动态（浏览器验收 + type-check/build） | 重复人工提效 | 保持 | 已关闭 |
+| E-4 | 商务合作信息 AI 提炼与市场动向报告 | `frontend/src/pages/business/BusinessPage.vue`、`frontend/src/stores/ai.ts`（商务汇总）、`frontend/src/mocks/ai.ts`（fetchBusinessLeads/IndustryShares/MarketSignals/CommonNeeds/InsightSummary）、`frontend/src/types/index.ts` | 已实现 | 从反馈中识别企业合作线索、按行业聚合分布、提炼市场动向信号、归纳跨企业共性需求并生成可视化汇总报告：顶部统计卡（企业合作线索/覆盖行业/市场动向信号/共性需求归纳）+ 企业线索/行业分布/市场动向/共性需求四个面板；线索推进（identified→qualified→pushed）保留人工确认 | 动态（浏览器验收 + type-check/build） | 商务联动新入口 | 保持 | 已关闭 |
+| E-5 | 政务统计扩展与侧边栏入口重构 | `frontend/src/pages/gov/GovPage.vue`（全量重写）、`frontend/src/mocks/gov.ts`、`frontend/src/types/index.ts`、`frontend/src/components/common/SfIcon.vue`（新增 map/megaphone path）、`frontend/src/api/gov.ts`（保持单接口） | 已实现 | GovPage 重构为「6 张顶部统计卡（总诉求 48/本周新增 7/待办 12/逾期 3/按期办结率 81%/最高预警-橙色）+ 报告元信息条（统计周期·生成时间·AI 仅提炼声明）+ 7 个标签面板（诉求分级/督办事项/区域分布/热点主题/舆情预警/政策告知/审计留痕）」；舆情四级复用在 StatusBadge tone 白名单之外自绘 `.alert-blue/.alert-yellow/.alert-orange/.alert-red` 徽章；最高预警色 `.level-orange{color:#d97706}` | 动态（浏览器逐标签验收 + type-check/build + Docker 容器走查） | 政务演示闭环 | 保持 | 已关闭 |
+
+## 动态验证证据（前端页面切片验收 2026-10-14 首轮 + 2026-10-15 增补）
 
 | 检查项 | 命令/方式 | 结果 |
 | --- | --- | --- |
@@ -71,6 +81,18 @@
 | AI 状态流转（A-4） | `frontend/src/mocks/feedbackDb.ts` F1061-F1064 | 4 条 AI 状态示例数据（ai_reviewing/ai_replied）在列表中正确显示「AI审核中」「AI已回复」标签，筛选 AI 状态可命中 |
 | AI 后端契约核对（A-6） | 前后端 7 接口逐项比对 | `frontend/src/api/ai.ts` 与 `backend/app/api/v1/ai.py` 的路径、方法、入参、出参完全一致；前端 `http.ts` baseURL `/api/v1` 与后端 router 前缀一致，`VITE_USE_MOCK=false` 可无缝切换 |
 | AI 容器部署（A-7） | `docker compose up -d --build --no-deps frontend`（FRONTEND_PORT=8090） | 容器重建 healthy，http://localhost:8090 可访问，最新 dist 已部署，AI 面板与反馈 AI 功能在容器内可操作 |
+| 反馈统计卡（E-1） | /feedback 浏览器验证 | 顶部状态统计卡（待解决/AI 已生成/AI 已自动回复/已解决等）与列表数据一致；列表行间距与密度调整后视觉不密集；左侧导航条加宽后「洞察与决策」等标签不再换行 |
+| 详情抽屉回复展示与 AI 草稿可改（E-2） | /feedback 打开详情抽屉 | 抽屉内展示已回复内容与 AI 回复草稿；非 AI 审批场景下可编辑 AI 草稿再保存/采用 |
+| 气泡助手重构（E-2） | /feedback 右下角 AI 悬浮气泡 | 完整 AI 助手面板：欢迎页 + 功能分类快捷入口 + 历史会话 + Agent/Chat 模式切换 + 免责声明；对单条意见可生成回复建议并插入草稿区，自由聊天正常 |
+| AI 自动化（E-3） | 自动化入口浏览器验证 | 自动分类/自动去重合并/自动优先级升降级规则配置与执行面板可操作，规则可开关，执行反馈即时 |
+| 商务洞察（E-4） | /business 浏览器验证 | 顶部统计卡（企业合作线索/覆盖行业/市场动向信号/共性需求归纳）+ 企业线索/行业分布/市场动向/共性需求 4 面板渲染正常，行业分布含 pct 与占比展示，市场动向与共性需求来自 mock 企业反馈聚合 |
+| 政务统计卡（E-5） | /gov 浏览器验证 | 6 张顶部统计卡数值正确（总诉求 48/本周新增 7/待办 12/逾期 3/按期办结率 81%/最高预警-橙色）+ 报告元信息条（统计周期·生成时间·AI 仅提炼声明） |
+| 政务 7 标签逐项（E-5） | /gov 7 个标签逐一 eval 切换 | 诉求分级 A-D 四级 BarRow（2/11/28/7）；督办三级表（1/0、3/1、8/2 逾期）；区域分布 6 区（玄武 25% 电梯加装/住建局+规划局 等）+ pct + 部门 chips；热点主题 4 条（GT-2601 已生成治理任务并显示「治理任务 GT-2601-治理 已进入督办流程」，GT-2602~2604 待生成，含痛点成因 + 原话引用证据，数值与 mock 一致 17/+28、15/+35、11/-8）；舆情预警 4 条（BR-001 蓝/YE-002 黄/OR-003 橙/RD-004 红，徽章 class alert-blue/yellow/orange/red 全部正确绑定，RD-004 已派发住建局应急专班）；政策告知 3 条（N4001/4002/4003，含送达人数/阅读率/渠道新字段）；审计留痕 5 条（A5001~5005） |
+| 扩展功能类型检查 | `npm run type-check`（frontend） | 通过（SfIcon 补充 map/megaphone path 后无类型错误） |
+| 扩展功能生产构建 | `npm run build`（frontend） | 通过（vue-tsc --noEmit + vite build，约 3.09s，产物 dist/assets 正常） |
+| 扩展功能 Docker 集成（position 6） | `docker compose up -d --build`（FRONTEND_PORT=8088，因本机 8080 被 edunash-nginx 占用） | 四容器（postgres(pgvector)/redis/backend/frontend）全部 healthy；后端健康路由经 `curl http://localhost:8000/api/v1/healthz` 返回 `{"status":"ok","service":"signalflow-backend"}`；容器版 http://localhost:8088/gov 走查通过（6 统计卡 + 7 标签 + 四级预警徽章）；前端容器内全流程可操作 |
+| 后端健康路由确认（position 6） | `curl http://localhost:8000/healthz` vs `/api/v1/healthz` | 裸 `/healthz` 返回 404；实际健康路由为 `/api/v1/healthz`（`backend/app/api/v1/health.py`），compose 与 deploy/README 中过时注释已同步修正 |
+| 后端 gov 契约边界确认（position 6） | `curl http://localhost:8000/api/v1/gov/overview` | 返回 404（backend `router.py` 仅注册 health/feedbacks/insights/ai，未注册 gov 路由）；当前 mock 模式前端不依赖真实接口，真实 `/gov/overview` 契约列入下一阶段 |
 
 ### 重要结论：草稿回传「未回写」疑点澄清
 
@@ -81,19 +103,19 @@
 
 ## 通俗语言发现
 
-1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手。
-2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；按用户要求完成 AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）；`npm run type-check` + `npm run build` 通过，Docker 容器重建 healthy。
-3. **应该发生什么**：AI 功能全部由 mock 数据与 mock 后端驱动，前端可独立演示（不依赖真实后端）；下一阶段（见 `docs/next-stage-plan.md`）将真实 LLM 接入与政务知识库对接，替换 mock 工作流实现。
-4. **为什么差异重要**：AI 参与的面板与反馈自动化为演示提供了「AI 原生」观感；mock 适配层保证后续接真实 LLM/知识库零改动；AI 状态标签与后端契约先行避免前后端联调返工。
-5. **证据与受影响边界**：全部 7 个页面交互闭环与 AI 面板/对话/工作流状态/自动化规则/回复生成/自动审批/气泡助手均有浏览器证据；type-check/build/容器部署通过；后端 AI 服务当前为 mock 实现，真实 LLM 与知识库接入未实施。
-6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流）与政务知识库对接（RAG 检索），替换 A-6 的 mock 服务实现；同时按用户指示将本阶段成果提交并推送至私有 GitHub 仓库。
+1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手；2026-10-15 进一步要求：反馈页行距与统计卡、气泡助手按参考图重构、详情抽屉展示回复且 AI 草稿可改、按优先级分阶段开发（UI 走查 → 气泡助手 → AI 自动化 → 商务洞察 → 政务扩展）。
+2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）已完成；2026-10-15 增补完成反馈统计卡与行距/导航修复、详情抽屉回复展示与 AI 草稿可改、气泡助手完整面板重构（欢迎页/快捷入口/历史会话/模式切换/免责声明）、AI 自动化流程（分类/去重合并/优先级规则）、商务洞察（线索/行业/动向/共性需求四面板）与政务统计扩展（6 统计卡 + 7 标签 + 四级预警）；`npm run type-check` + `npm run build` 通过，Docker compose 四容器 healthy（前端 8088）。
+3. **应该发生什么**：全部新增功能由 mock 数据驱动，前端可独立演示（不依赖真实后端）；真实后端 gov 契约（`/gov/overview`）与真实 LLM 接入、政务知识库对接属于下一阶段（见 `docs/next-stage-plan.md`）。
+4. **为什么差异重要**：统计卡让「待办/逾期/办结率」一眼可见；气泡助手与抽屉改造使 AI 草稿可人工干预，符合政企「AI 辅助 + 人工兜底」原则；AI 自动化与商务/政务扩展覆盖产品规划的推销联动与政务场景，增强演示完整性；mock 适配层保证后续接真实 LLM/知识库零改动。
+5. **证据与受影响边界**：FS-1~FS-7 与 E-1~E-5 全部页面交互闭环均有浏览器证据；type-check/build/容器部署（8088）通过；后端 AI 服务当前为 mock 实现，真实 LLM、政务知识库与后端 `/gov/overview` 合约未实施。
+6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流）、政务知识库对接（RAG 检索）与后端政务接口契约补齐，替换 mock 服务实现；本阶段成果已提交并推送至私有 GitHub 仓库。
 
 ## 评审覆盖与关闭标准
 
-- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证。
-- 未检查的文件或边界：真实 LLM 接入与政务知识库对接（下一阶段）、后端 AI mock 服务在真实 FastAPI 运行时的手工 curl 验证（后端依赖未安装，契约以静态核对为准）。
+- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证 + E-1~E-5 扩展功能（反馈 UI 与统计卡/详情抽屉与气泡助手/AI 自动化/商务洞察/政务统计扩展）的浏览器验收与 type-check/build/Docker 集成验证。
+- 未检查的文件或边界：真实 LLM 接入与政务知识库对接（下一阶段）、后端 AI mock 服务在真实 FastAPI 运行时的手工 curl 验证（后端依赖未安装，契约以静态核对为准）、后端 `/gov/overview` 真实接口（未注册，属下一阶段契约补齐）。
 - 关闭前端规划项所需证据：切片实现完成后的浏览器可见验收（`docs/frontend-development-plan.md` §3.3）；文档本身的"已落盘"证据为文件存在与内容核对。
-- 最后检查版本或日期：2026-10-14。
+- 最后检查版本或日期：2026-10-15。
 
 ## 删除或合并候选
 

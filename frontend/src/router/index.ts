@@ -40,6 +40,18 @@ const router = createRouter({
       meta: { title: '路线图', icon: 'roadmap' },
     },
     {
+      path: '/automation',
+      name: 'automation',
+      component: () => import('@/pages/automation/AutomationPage.vue'),
+      meta: { title: 'AI 自动化', icon: 'automation' },
+    },
+    {
+      path: '/business',
+      name: 'business',
+      component: () => import('@/pages/business/BusinessPage.vue'),
+      meta: { title: '商务洞察', icon: 'briefcase' },
+    },
+    {
       path: '/gov',
       name: 'gov',
       component: () => import('@/pages/gov/GovPage.vue'),

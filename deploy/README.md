@@ -11,7 +11,7 @@ docker compose up -d --build
 ```
 
 - 前端：http://localhost:8080 （`/api` 由 Nginx 反代到后端）
-- 后端健康检查：http://localhost:8000/healthz
+- 后端健康检查：http://localhost:8000/api/v1/healthz
 - 停止：`docker compose down`（数据卷保留）
 - 清空数据：`docker compose down -v`
 

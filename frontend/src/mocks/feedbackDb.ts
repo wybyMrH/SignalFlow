@@ -7,7 +7,7 @@
  * - 聚合指标（总览趋势/渠道分布）由 dashboard.ts 基于本库实时计算，保证口径自洽。
  */
 
-import type { FeedbackCreate, FeedbackListQuery, FeedbackView, Paged } from '@/types'
+import type { FeedbackCreate, FeedbackListQuery, FeedbackStats, FeedbackView, Paged } from '@/types'
 
 /** 演示租户 */
 export const DEMO_TENANT = 'demo-gov'
@@ -95,6 +95,27 @@ export function mockDelay<T>(data: T, ms = 220): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(structuredClone(data)), ms))
 }
 
+/** 根据主题生成演示性回复文案（历史回复展示用） */
+export function buildMockReply(topicTitle?: string | null): string {
+  const title = topicTitle ?? '相关事项'
+  return `您好，您反映的“${title}”问题我们已收悉并核实处理，给您带来不便深表歉意。后续我们将持续优化服务流程与体验，感谢您的理解与支持。如有疑问可拨打服务热线详询。`
+}
+
+/**
+ * 初始化历史回复：为已回复 / 已解决 / 已关闭 / AI 已回复 状态记录补充演示回复内容，
+ * 保证详情抽屉“已回复内容”可展示；不覆盖手写的 reply_content。
+ */
+function ensureReplies() {
+  const done: FeedbackView['status'][] = ['replied', 'resolved', 'closed', 'ai_replied']
+  for (const f of feedbackDb) {
+    if (done.includes(f.status) && !f.reply_content) {
+      f.reply_content = buildMockReply(f.topic_title)
+      f.replied_at = f.updated_at
+    }
+  }
+}
+ensureReplies()
+
 /** 列表查询：过滤 + 关键字 + 分页（与后端 GET /feedbacks 契约一致） */
 export function listFeedbacks(query: FeedbackListQuery = {}): Paged<FeedbackView> {
   const { source, status, keyword, topic_id, page = 1, page_size = 20 } = query
@@ -146,12 +167,48 @@ export function createFeedback(payload: FeedbackCreate): FeedbackView {
   return row
 }
 
-/** 状态流转（回写 updated_at；resolved/replied 时记录处理人） */
-export function updateFeedbackStatus(id: string, status: FeedbackView['status'], reviewer?: string): FeedbackView | undefined {
+/** 状态流转（回写 updated_at；resolved/replied 时记录处理人；达成终态自动补回复文案） */
+export function updateFeedbackStatus(
+  id: string,
+  status: FeedbackView['status'],
+  reviewer?: string,
+  replyContent?: string | null,
+): FeedbackView | undefined {
   const row = feedbackDb.find((r) => r.id === id)
   if (!row) return undefined
   row.status = status
   row.updated_at = new Date().toISOString()
   if (reviewer) row.reviewer = reviewer
+  const done: FeedbackView['status'][] = ['replied', 'resolved', 'closed', 'ai_replied']
+  if (done.includes(status) && !row.reply_content) {
+    row.reply_content = replyContent && replyContent.trim() ? replyContent.trim() : buildMockReply(row.topic_title)
+    row.replied_at = row.updated_at
+  }
   return row
+}
+
+/** 反馈状态统计 */
+export function getFeedbackStats(): FeedbackStats {
+  const s: FeedbackStats = {
+    total: feedbackDb.length,
+    new: 0,
+    analyzing: 0,
+    ai_reviewing: 0,
+    ai_replied: 0,
+    resolved: 0,
+    replied: 0,
+    closed: 0,
+    high_priority: 0,
+  }
+  for (const f of feedbackDb) {
+    if (f.status === 'new') s.new++
+    else if (f.status === 'analyzing') s.analyzing++
+    else if (f.status === 'ai_reviewing') s.ai_reviewing++
+    else if (f.status === 'ai_replied') s.ai_replied++
+    else if (f.status === 'resolved') s.resolved++
+    else if (f.status === 'replied') s.replied++
+    else if (f.status === 'closed') s.closed++
+    if ((f.priority ?? 0) >= 4) s.high_priority++
+  }
+  return s
 }

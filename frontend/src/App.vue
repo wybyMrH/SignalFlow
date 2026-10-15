@@ -17,6 +17,8 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/feedback', label: '反馈管理', icon: 'feedback' },
   { to: '/insights', label: '洞察与决策', icon: 'insights' },
   { to: '/roadmap', label: '路线图', icon: 'roadmap' },
+  { to: '/automation', label: 'AI 自动化', icon: 'automation' },
+  { to: '/business', label: '商务洞察', icon: 'briefcase' },
   { to: '/gov', label: '政务适配', icon: 'gov' },
   { to: '/settings', label: '系统设置', icon: 'settings' },
 ]
@@ -120,8 +122,8 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: 56px;
-  height: 52px;
+  width: 80px;
+  height: 56px;
   border-radius: var(--sf-radius-sm);
   color: var(--sf-sidebar-muted);
   text-decoration: none;
@@ -138,6 +140,7 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
 .nav-label {
   font-size: 10px;
   line-height: 1;
+  white-space: nowrap;
 }
 
 .theme-toggle {

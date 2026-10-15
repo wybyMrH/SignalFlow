@@ -1,7 +1,7 @@
 import http from './http'
 import { useMock } from './mock'
-import { createFeedback as mockCreate, getFeedback as mockGet, listFeedbacks as mockList, mockDelay, updateFeedbackStatus as mockUpdate } from '@/mocks'
-import type { Feedback, FeedbackCreate, FeedbackListQuery, FeedbackStatus, FeedbackView, Paged } from '@/types'
+import { createFeedback as mockCreate, getFeedback as mockGet, getFeedbackStats as mockStats, listFeedbacks as mockList, mockDelay, updateFeedbackStatus as mockUpdate } from '@/mocks'
+import type { Feedback, FeedbackCreate, FeedbackListQuery, FeedbackStatus, FeedbackStats, FeedbackView, Paged } from '@/types'
 
 /** 反馈列表（分页 + 筛选），对应 GET /feedbacks */
 export async function fetchFeedbackList(query: FeedbackListQuery = {}): Promise<Paged<FeedbackView>> {
@@ -33,12 +33,21 @@ export async function createFeedback(payload: FeedbackCreate): Promise<Feedback>
 }
 
 /** 反馈状态流转，对应 PATCH /feedbacks/{id}/status */
-export async function updateFeedbackStatus(id: string, status: FeedbackStatus, reviewer?: string): Promise<FeedbackView> {
+export async function updateFeedbackStatus(id: string, status: FeedbackStatus, reviewer?: string, replyContent?: string | null): Promise<FeedbackView> {
   if (useMock()) {
-    const row = mockUpdate(id, status, reviewer)
+    const row = mockUpdate(id, status, reviewer, replyContent)
     if (!row) return Promise.reject(new Error('反馈不存在'))
     return mockDelay(row)
   }
-  const { data } = await http.patch<FeedbackView>(`/feedbacks/${id}/status`, { status, reviewer })
+  const { data } = await http.patch<FeedbackView>(`/feedbacks/${id}/status`, { status, reviewer, reply_content: replyContent })
+  return data
+}
+
+/** 反馈状态统计 */
+export async function fetchFeedbackStats(): Promise<FeedbackStats> {
+  if (useMock()) {
+    return mockDelay(mockStats())
+  }
+  const { data } = await http.get<FeedbackStats>('/feedbacks/stats')
   return data
 }

@@ -12,8 +12,9 @@ import Drawer from '@/components/common/Drawer.vue'
 import EmptyState from '@/components/common/EmptyState.vue'
 import SfIcon from '@/components/common/SfIcon.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
+import StatCard from '@/components/common/StatCard.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import { fetchAIReplySuggestion } from '@/api/ai'
+import { fetchAIReplySuggestion, sendAIChatMessage } from '@/api/ai'
 import { useFeedbackStore } from '@/stores/feedback'
 import type { FeedbackSource, FeedbackStatus, FeedbackView } from '@/types'
 import { formatDateTime } from '@/utils'
@@ -30,10 +31,35 @@ const filters = reactive<{ source: FeedbackSource | ''; status: FeedbackStatus |
 const drawerOpen = ref(false)
 const active = ref<FeedbackView | null>(null)
 
+/** 可编辑的 AI 草稿（id -> draft） */
+const editableDrafts = ref<Record<string, string>>({})
+
 /** AI 气泡助手状态 */
 const aiBubbleOpen = ref(false)
 const aiSuggestion = ref('')
 const aiSuggestLoading = ref(false)
+/** 气泡助手模式：'home' | 'chat' */
+const bubbleMode = ref<'home' | 'chat'>('home')
+const bubbleInput = ref('')
+const bubbleMessages = ref<Array<{ role: 'user' | 'assistant'; content: string }>>([])
+const bubbleLoading = ref(false)
+/** 历史会话（本地会话记录：标题 -> 消息列表） */
+const bubbleHistory = ref<Array<{ title: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }>>([
+  {
+    title: '今天工单情况如何？',
+    messages: [
+      { role: 'user', content: '今天工单情况如何？' },
+      { role: 'assistant', content: '今日新接入工单 64 条，待处理 31 条，其中高优先级 4 条；平均解决时长约 6.2 小时。主要渠道为热线与工单系统。' },
+    ],
+  },
+  {
+    title: '大厅排队问题怎么解决？',
+    messages: [
+      { role: 'user', content: '大厅排队问题怎么解决？' },
+      { role: 'assistant', content: '建议推进「动态开窗」优化任务：高峰时段按实时客流开放窗口，并上线微信排队提醒，同时保留老年人人工取号通道。' },
+    ],
+  },
+])
 
 /** 状态流转动作：当前状态 → 可执行按钮（含 AI 流转） */
 const NEXT_STATUS: Array<{ from: FeedbackStatus[]; to: FeedbackStatus; label: string; tone: 'info' | 'success' | 'warning' | 'muted' }> = [
@@ -57,6 +83,7 @@ onMounted(() => {
     if (src in sourceLabels) store.setFilter({ source: src as FeedbackSource })
   }
   void store.fetchPage()
+  void store.fetchStats()
 })
 
 function apply() {
@@ -75,6 +102,9 @@ function reset() {
 function openDetail(item: FeedbackView) {
   active.value = item
   drawerOpen.value = true
+  if (store.aiDrafts[item.id]) {
+    editableDrafts.value[item.id] = store.aiDrafts[item.id]
+  }
 }
 
 async function transit(next: FeedbackStatus) {
@@ -116,14 +146,92 @@ async function askAIForSuggestion() {
   }
 }
 
+/** 保存草稿（仅前端） */
+function saveDraft() {
+  if (!active.value) return
+  const d = editableDrafts.value[active.value.id]
+  if (d !== undefined) store.aiDrafts[active.value.id] = d
+}
+
+/** 采用并发送：把用户编辑后的草稿作为正式回复发出，并流转状态为已回复 */
+async function sendDraft() {
+  if (!active.value) return
+  saveDraft()
+  const id = active.value.id
+  const draft = editableDrafts.value[id] ?? store.aiDrafts[id]
+  await store.setStatus(id, 'replied', '管理员', draft)
+  store.clearDraft(id)
+  delete editableDrafts.value[id]
+  active.value = store.items.find((r) => r.id === active.value?.id) ?? active.value
+}
+
 function clearActiveDraft() {
   if (!active.value) return
   store.clearDraft(active.value.id)
+  delete editableDrafts.value[active.value.id]
+}
+
+/** 气泡助手：打开会话记录并切换到聊天模式 */
+function openBubbleHistory(idx: number) {
+  const h = bubbleHistory.value[idx]
+  if (!h) return
+  bubbleMessages.value = h.messages.map((m) => ({ ...m }))
+  bubbleMode.value = 'chat'
+}
+
+/** 气泡助手发送消息（接入 AI 对话链路） */
+async function sendBubbleMessage() {
+  const text = bubbleInput.value.trim()
+  if (!text) return
+  bubbleMode.value = 'chat'
+  bubbleMessages.value.push({ role: 'user', content: text })
+  bubbleInput.value = ''
+  bubbleLoading.value = true
+  try {
+    const reply = await sendAIChatMessage(
+      text,
+      bubbleMessages.value.map((m) => ({
+        id: m.content,
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+        timestamp: new Date().toISOString(),
+      })),
+    )
+    bubbleMessages.value.push({ role: 'assistant', content: reply.content })
+    // 记录为历史会话（保留最近 8 条，覆盖同标题会话）
+    const title = text.length > 18 ? `${text.slice(0, 18)}…` : text
+    const existing = bubbleHistory.value.findIndex((h) => h.title === title)
+    const entry = { title, messages: bubbleMessages.value.map((m) => ({ ...m })) }
+    if (existing >= 0) bubbleHistory.value[existing] = entry
+    else bubbleHistory.value.unshift(entry)
+    if (bubbleHistory.value.length > 8) bubbleHistory.value.length = 8
+  } finally {
+    bubbleLoading.value = false
+  }
+}
+
+/** 将气泡助手中的建议插入到草稿区 */
+function insertSuggestionToDraft() {
+  if (!active.value || !aiSuggestion.value) return
+  const id = active.value.id
+  store.aiDrafts[id] = aiSuggestion.value
+  editableDrafts.value[id] = aiSuggestion.value
+  aiSuggestion.value = ''
 }
 </script>
 
 <template>
   <div class="fb">
+    <!-- 状态统计卡 -->
+    <section class="stats-bar">
+      <StatCard label="全部反馈" :value="store.stats?.total ?? 0" />
+      <StatCard label="待解决" :value="(store.stats?.new ?? 0) + (store.stats?.analyzing ?? 0)" hint="新提交+分析中" />
+      <StatCard label="AI审核中" :value="store.stats?.ai_reviewing ?? 0" />
+      <StatCard label="AI已回复" :value="store.stats?.ai_replied ?? 0" />
+      <StatCard label="已解决" :value="(store.stats?.resolved ?? 0) + (store.stats?.replied ?? 0)" hint="已回复+已解决" />
+      <StatCard label="高优先级" :value="store.stats?.high_priority ?? 0" />
+    </section>
+
     <!-- 筛选单行 -->
     <section class="card filter-bar">
       <select v-model="filters.source" class="sel" aria-label="来源">
@@ -240,13 +348,31 @@ function clearActiveDraft() {
           </div>
         </div>
 
-        <!-- AI 草稿展示 -->
+        <!-- 历史回复 -->
+        <div v-if="active.reply_content" class="reply-box">
+          <div class="reply-header">
+            <SfIcon name="chat" :size="12" /> 已回复内容
+          </div>
+          <div class="reply-body">{{ active.reply_content }}</div>
+        </div>
+
+        <!-- AI 草稿展示（可编辑） -->
         <div v-if="store.aiDrafts[active.id]" class="ai-draft-box">
           <div class="ai-draft-header">
             <span class="ai-draft-label"><SfIcon name="logo" :size="12" /> AI 回复草稿</span>
             <button type="button" class="btn sm" @click="clearActiveDraft">清除</button>
           </div>
-          <div class="ai-draft-body">{{ store.aiDrafts[active.id] }}</div>
+          <textarea
+            :value="editableDrafts[active.id] ?? store.aiDrafts[active.id]"
+            @input="(e: any) => { if (active) editableDrafts[active.id] = e.target.value }"
+            class="ai-draft-textarea"
+            rows="4"
+            placeholder="可在此修改 AI 生成的回复草稿..."
+          />
+          <div class="ai-draft-footer">
+            <button type="button" class="btn sm" @click="saveDraft">保存草稿</button>
+            <button type="button" class="btn sm primary" @click="sendDraft">采用并发送</button>
+          </div>
         </div>
 
         <div class="act">
@@ -264,7 +390,7 @@ function clearActiveDraft() {
       </div>
     </Drawer>
 
-    <!-- AI 气泡助手（悬浮） -->
+    <!-- AI 助手气泡（悬浮） -->
     <div class="ai-bubble" :class="{ open: aiBubbleOpen }">
       <button type="button" class="ai-bubble-trigger" @click="aiBubbleOpen = !aiBubbleOpen">
         <SfIcon :name="aiBubbleOpen ? 'close' : 'logo'" :size="20" />
@@ -272,25 +398,103 @@ function clearActiveDraft() {
       <div v-if="aiBubbleOpen" class="ai-bubble-panel">
         <div class="ai-bubble-head">
           <SfIcon name="logo" :size="14" />
-          AI 回复助手
-        </div>
-        <div class="ai-bubble-body">
-          <p class="ai-bubble-hint">
-            选中反馈详情后，点击「获取建议」即可基于知识库与政策库获得回复建议。
-          </p>
-          <button
-            type="button"
-            class="btn primary sm"
-            style="width: 100%; margin-top: 8px;"
-            :disabled="!active || aiSuggestLoading"
-            @click="askAIForSuggestion"
-          >
-            {{ aiSuggestLoading ? '思考中...' : '获取回复建议' }}
+          <span>SignalFlow AI 助手</span>
+          <button type="button" class="btn ghost sm" style="margin-left:auto" @click="aiBubbleOpen = false">
+            <SfIcon name="close" :size="14" />
           </button>
-          <div v-if="aiSuggestion" class="ai-suggestion">
-            <div class="ai-suggestion-label">建议</div>
-            {{ aiSuggestion }}
+        </div>
+
+        <!-- 欢迎页 -->
+        <div v-if="bubbleMode === 'home'" class="ai-bubble-body">
+          <div class="ai-welcome">
+            <div class="ai-welcome-title">您好，欢迎使用 AI 助手</div>
+            <p class="ai-welcome-sub">我可以帮您处理反馈、生成回复草稿、查询工单状态或解答政务问题。</p>
           </div>
+
+          <div class="ai-categories">
+            <button v-for="c in [
+              { label: '政策咨询', icon: 'shield' },
+              { label: '办事流程', icon: 'checklist' },
+              { label: '投诉举报', icon: 'alert' },
+              { label: '民生诉求', icon: 'chat' },
+              { label: '服务态度', icon: 'sentiment' },
+              { label: '应急事件', icon: 'clock' },
+            ]" :key="c.label" type="button" class="ai-category" @click="bubbleInput = c.label; sendBubbleMessage()">
+              <SfIcon :name="c.icon as any" :size="16" />
+              <span>{{ c.label }}</span>
+            </button>
+          </div>
+
+          <div class="ai-shortcuts">
+            <button type="button" class="ai-shortcut" @click="bubbleInput = '今天工单情况如何？'; sendBubbleMessage()">
+              # 今天工单情况如何？
+            </button>
+            <button v-if="active" type="button" class="ai-shortcut" @click="askAIForSuggestion">
+              # 这条反馈怎么回复？
+            </button>
+            <button type="button" class="ai-shortcut" @click="bubbleInput = '最近有哪些热点诉求？'; sendBubbleMessage()">
+              # 最近有哪些热点诉求？
+            </button>
+          </div>
+
+          <div v-if="aiSuggestion" class="ai-suggestion">
+            <div class="ai-suggestion-label">回复建议</div>
+            <div>{{ aiSuggestion }}</div>
+            <button v-if="active" type="button" class="btn sm primary" style="margin-top:8px;width:100%" @click="insertSuggestionToDraft">
+              插入到草稿
+            </button>
+          </div>
+
+          <div v-if="bubbleHistory.length" class="ai-history">
+            <div class="ai-history-label">最近会话</div>
+            <button
+              v-for="(h, i) in bubbleHistory"
+              :key="h.title"
+              type="button"
+              class="ai-history-item"
+              @click="openBubbleHistory(i)"
+            >
+              <SfIcon name="chat" :size="12" />
+              <span class="ai-history-title">{{ h.title }}</span>
+              <SfIcon name="chevron-right" :size="12" class="ai-history-arrow" />
+            </button>
+          </div>
+        </div>
+
+        <!-- 聊天页 -->
+        <div v-else class="ai-chat-body">
+          <div class="ai-messages">
+            <div v-for="(m, i) in bubbleMessages" :key="i" class="ai-msg" :class="m.role">
+              <div class="ai-msg-bubble">{{ m.content }}</div>
+            </div>
+            <div v-if="bubbleLoading" class="ai-msg assistant">
+              <div class="ai-msg-bubble ai-msg-loading">
+                <span class="dot" /><span class="dot" /><span class="dot" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 输入区 -->
+        <div class="ai-bubble-input-bar">
+          <div class="ai-input-wrap">
+            <input v-model="bubbleInput" type="text" placeholder="你可以这样问我：今天工单情况如何" @keyup.enter="sendBubbleMessage" />
+            <button type="button" class="ai-send-btn" :disabled="bubbleLoading || !bubbleInput.trim()" @click="sendBubbleMessage">
+              <SfIcon name="send" :size="16" />
+            </button>
+          </div>
+          <div class="ai-mode-bar">
+            <button type="button" class="ai-mode-btn" :class="{ active: bubbleMode === 'home' }" @click="bubbleMode = 'home'">
+              <SfIcon name="magic" :size="12" /> 助手
+            </button>
+            <button type="button" class="ai-mode-btn" :class="{ active: bubbleMode === 'chat' }" @click="bubbleMode = 'chat'">
+              <SfIcon name="chat" :size="12" /> 对话
+            </button>
+          </div>
+        </div>
+
+        <div class="ai-disclaimer">
+          内容由 AI 生成，仅供参考，您据此所作判断及操作均由您自行承担责任。
         </div>
       </div>
     </div>
@@ -302,6 +506,16 @@ function clearActiveDraft() {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-3);
+}
+.stats-bar {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--sf-space-3);
+}
+@media (max-width: 1100px) {
+  .stats-bar {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 .card {
   background: var(--sf-surface);
@@ -393,8 +607,8 @@ function clearActiveDraft() {
   white-space: nowrap;
 }
 .tbl td {
-  height: 40px;
-  padding: 0 var(--sf-space-2);
+  height: 52px;
+  padding: 10px var(--sf-space-2);
   border-bottom: 1px solid var(--sf-border);
   vertical-align: middle;
 }
@@ -509,6 +723,29 @@ function clearActiveDraft() {
   background: var(--sf-primary-soft);
 }
 
+/* 历史回复 */
+.reply-box {
+  padding: var(--sf-space-3);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-success-soft);
+  border: 1px solid var(--sf-success);
+}
+.reply-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-success);
+  margin-bottom: var(--sf-space-2);
+}
+.reply-body {
+  font-size: var(--sf-font-13);
+  line-height: 1.6;
+  color: var(--sf-text);
+  white-space: pre-line;
+}
+
 /* AI 草稿展示 */
 .ai-draft-box {
   padding: var(--sf-space-3);
@@ -530,11 +767,22 @@ function clearActiveDraft() {
   font-weight: 600;
   color: var(--sf-primary);
 }
-.ai-draft-body {
+.ai-draft-textarea {
+  width: 100%;
+  padding: var(--sf-space-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
   font-size: var(--sf-font-13);
   line-height: 1.6;
-  color: var(--sf-text);
-  white-space: pre-line;
+  resize: vertical;
+  font-family: inherit;
+}
+.ai-draft-footer {
+  display: flex;
+  gap: var(--sf-space-2);
+  margin-top: var(--sf-space-2);
 }
 
 /* AI 气泡助手 */
@@ -566,12 +814,15 @@ function clearActiveDraft() {
   transform: scale(1.05);
 }
 .ai-bubble-panel {
-  width: 320px;
+  width: 380px;
+  max-height: 560px;
   background: var(--sf-surface);
   border: 1px solid var(--sf-border);
   border-radius: var(--sf-radius);
-  box-shadow: var(--sf-shadow);
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .ai-bubble-head {
   display: flex;
@@ -582,15 +833,227 @@ function clearActiveDraft() {
   font-weight: 600;
   background: linear-gradient(135deg, var(--sf-primary-soft) 0%, transparent 100%);
   border-bottom: 1px solid var(--sf-border);
+  flex-shrink: 0;
 }
 .ai-bubble-body {
   padding: var(--sf-space-3) var(--sf-space-4);
+  overflow-y: auto;
+  flex: 1;
 }
-.ai-bubble-hint {
+.ai-welcome {
+  text-align: center;
+  margin-bottom: var(--sf-space-3);
+}
+.ai-welcome-title {
+  font-size: var(--sf-font-16);
+  font-weight: 600;
+  color: var(--sf-text);
+  margin-bottom: 6px;
+}
+.ai-welcome-sub {
   margin: 0;
   font-size: var(--sf-font-13);
   color: var(--sf-text-secondary);
   line-height: 1.5;
+}
+.ai-categories {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--sf-space-2);
+  margin-bottom: var(--sf-space-3);
+}
+.ai-category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: var(--sf-space-2) var(--sf-space-1);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.ai-category:hover {
+  border-color: var(--sf-primary-border);
+  background: var(--sf-primary-soft);
+}
+.ai-history {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: var(--sf-space-2);
+  border-top: 1px solid var(--sf-border);
+  padding-top: var(--sf-space-2);
+}
+.ai-history-label {
+  font-size: var(--sf-font-12);
+  font-weight: 600;
+  color: var(--sf-text-secondary);
+  margin-bottom: 4px;
+}
+.ai-history-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px var(--sf-space-2);
+  border: none;
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text-secondary);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ai-history-item:hover {
+  background: var(--sf-primary-soft);
+  color: var(--sf-primary);
+}
+.ai-history-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ai-history-arrow {
+  color: var(--sf-text-faint);
+}
+.ai-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--sf-space-3);
+}
+.ai-shortcut {
+  text-align: left;
+  padding: 6px var(--sf-space-2);
+  border: none;
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-bg);
+  color: var(--sf-primary);
+  font-size: var(--sf-font-13);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.ai-shortcut:hover {
+  background: var(--sf-primary-soft);
+}
+.ai-chat-body {
+  padding: var(--sf-space-2) var(--sf-space-3);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 120px;
+}
+.ai-messages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-2);
+}
+.ai-msg {
+  display: flex;
+}
+.ai-msg.user {
+  justify-content: flex-end;
+}
+.ai-msg-bubble {
+  max-width: 85%;
+  padding: var(--sf-space-2) var(--sf-space-3);
+  border-radius: var(--sf-radius-sm);
+  font-size: var(--sf-font-13);
+  line-height: 1.5;
+  background: var(--sf-bg);
+  color: var(--sf-text);
+}
+.ai-msg.user .ai-msg-bubble {
+  background: var(--sf-primary);
+  color: #fff;
+}
+.ai-msg-loading .dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sf-text-faint);
+  margin: 0 2px;
+  animation: ai-dot 1.2s infinite ease-in-out both;
+}
+.ai-msg-loading .dot:nth-child(1) { animation-delay: 0s; }
+.ai-msg-loading .dot:nth-child(2) { animation-delay: 0.2s; }
+.ai-msg-loading .dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes ai-dot {
+  0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+.ai-bubble-input-bar {
+  padding: var(--sf-space-2) var(--sf-space-3);
+  border-top: 1px solid var(--sf-border);
+  flex-shrink: 0;
+}
+.ai-input-wrap {
+  display: flex;
+  gap: var(--sf-space-1);
+  align-items: center;
+}
+.ai-input-wrap input {
+  flex: 1;
+  height: 36px;
+  padding: 0 var(--sf-space-2);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: var(--sf-font-13);
+}
+.ai-send-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-primary);
+  color: #fff;
+  cursor: pointer;
+}
+.ai-send-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ai-mode-bar {
+  display: flex;
+  gap: var(--sf-space-2);
+  margin-top: var(--sf-space-1);
+}
+.ai-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--sf-border);
+  border-radius: 10px;
+  background: var(--sf-surface);
+  color: var(--sf-text-secondary);
+  font-size: var(--sf-font-12);
+  cursor: pointer;
+}
+.ai-mode-btn.active {
+  border-color: var(--sf-primary);
+  color: var(--sf-primary);
+  background: var(--sf-primary-soft);
+}
+.ai-disclaimer {
+  padding: 6px var(--sf-space-3);
+  font-size: 11px;
+  color: var(--sf-text-faint);
+  text-align: center;
+  border-top: 1px solid var(--sf-border);
+  background: var(--sf-bg);
+  line-height: 1.4;
 }
 .ai-suggestion {
   margin-top: var(--sf-space-3);

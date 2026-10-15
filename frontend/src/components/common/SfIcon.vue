@@ -40,6 +40,13 @@ export type IconName =
   | 'chat'
   | 'sentiment'
   | 'checklist'
+  | 'automation'
+  | 'briefcase'
+  | 'target'
+  | 'industry'
+  | 'need'
+  | 'map'
+  | 'megaphone'
 </script>
 
 <template>
@@ -202,6 +209,43 @@ export type IconName =
     <template v-else-if="name === 'checklist'">
       <path d="M4 6h16M4 12h16M4 18h10" />
       <path d="M18 16l1.5 1.5L22 15" />
+    </template>
+    <!-- 自动化：循环齿轮 -->
+    <template v-else-if="name === 'automation'">
+      <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.67 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.67a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+    </template>
+    <!-- 商务/企业：公文包 -->
+    <template v-else-if="name === 'briefcase'">
+      <rect x="3" y="7" width="18" height="13" rx="2" />
+      <path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
+      <path d="M3 12h18M12 12v2" />
+    </template>
+    <!-- 线索/目标：瞄准 -->
+    <template v-else-if="name === 'target'">
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="12" cy="12" r="4.5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" />
+    </template>
+    <!-- 行业/分布：柱状 -->
+    <template v-else-if="name === 'industry'">
+      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
+    </template>
+    <!-- 共性需求/清单：星标 -->
+    <template v-else-if="name === 'need'">
+      <path d="M12 3.5 14.2 9l5.8.4-4.4 3.8 1.4 5.7L12 15.6l-5 3.3 1.4-5.7L4 9.4 9.8 9 12 3.5Z" />
+    </template>
+    <!-- 区域/分布：地图 + 定位针 -->
+    <template v-else-if="name === 'map'">
+      <path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z" />
+      <path d="M9 4v14M15 6v14" />
+      <circle cx="12" cy="8.5" r="1.6" />
+      <path d="M12 6.9c0-.9.7-1.6 1.6-1.6" />
+    </template>
+    <!-- 政策告知/公告：喇叭 -->
+    <template v-else-if="name === 'megaphone'">
+      <path d="M4 10v4a1 1 0 0 0 1 1h2l8 4.5V4.5L7 9H5a1 1 0 0 0-1 1Z" />
+      <path d="M18 9a4 4 0 0 1 0 6M15.5 9.8a5 5 0 0 1 0 4.4" />
     </template>
   </svg>
 </template>

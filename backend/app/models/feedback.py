@@ -39,6 +39,41 @@ class Feedback(Base):
         nullable=True,
         comment="反馈内容向量表示（用于相似度去重与聚类）",
     )
+    # 阶段 6 前端契约扩展字段（展示/过滤用途，可空）
+    sentiment: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+        comment="情感倾向：positive / neutral / negative",
+    )
+    priority: Mapped[int] = mapped_column(
+        default=0,
+        comment="优先级 0-5（AI 分析切片回填）",
+    )
+    topic_id: Mapped[str | None] = mapped_column(
+        String(36),
+        nullable=True,
+        comment="归属洞察主题 id",
+    )
+    topic_title: Mapped[str | None] = mapped_column(
+        String(256),
+        nullable=True,
+        comment="归属洞察主题标题（冗余展示）",
+    )
+    reviewer: Mapped[str | None] = mapped_column(
+        String(128),
+        nullable=True,
+        comment="当前处理人",
+    )
+    reply_content: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+        comment="已回复内容（人工/AI 生成）",
+    )
+    replied_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        comment="回复时间",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

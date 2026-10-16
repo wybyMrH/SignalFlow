@@ -12,6 +12,8 @@ import { useAppStore } from '@/stores'
 const route = useRoute()
 const app = useAppStore()
 
+const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
+
 const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: '总览', icon: 'dashboard' },
   { to: '/feedback', label: '反馈管理', icon: 'feedback' },
@@ -56,7 +58,7 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
       <header class="topbar">
         <h1 class="page-title">{{ route.meta.title }}</h1>
         <div class="topbar-right">
-          <span class="mock-badge" title="当前使用模拟数据，设 VITE_USE_MOCK=false 切换真实后端">Mock</span>
+          <span v-if="isMock" class="mock-badge" title="当前使用模拟数据，设 VITE_USE_MOCK=false 切换真实后端">Mock</span>
           <span class="user">管理员</span>
         </div>
       </header>

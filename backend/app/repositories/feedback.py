@@ -34,3 +34,16 @@ class FeedbackRepository(BaseRepository[Feedback, uuid.UUID]):
     def get(self, feedback_id: uuid.UUID) -> Feedback | None:
         """按主键查询反馈。"""
         return self.get_by_id(feedback_id)
+
+    def get_by_source_ref(
+        self, source_ref: str, *, tenant_id: str = "default"
+    ) -> Feedback | None:
+        """按渠道幂等键查询已入库反馈（用于入站处理器去重）。"""
+        return (
+            self._db.query(Feedback)
+            .filter(
+                Feedback.source_ref == source_ref,
+                Feedback.tenant_id == tenant_id,
+            )
+            .first()
+        )

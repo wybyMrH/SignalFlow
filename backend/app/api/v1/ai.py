@@ -63,3 +63,67 @@ def auto_approve_feedback(feedback_id: str, payload: ReplyDraftRequest) -> AutoA
     """AI 自动审批：生成统一话术回复并标记状态。"""
     result = _ai_service.auto_approve(feedback_id, payload.content)
     return AutoApproveResponse(reply=result["reply"], status=result["status"])
+
+
+# ───── 自动化中心 ─────
+
+@router.get("/automation/classification")
+def get_auto_classification() -> list[dict]:
+    """自动分类结果列表。"""
+    return _ai_service.get_auto_classification()
+
+
+@router.get("/automation/dedup")
+def get_dedup_groups() -> list[dict]:
+    """去重合并组列表。"""
+    return _ai_service.get_dedup_groups()
+
+
+@router.get("/automation/priority-rules")
+def get_priority_rules() -> list[dict]:
+    """优先级评分规则列表（RICE 模型）。"""
+    return _ai_service.get_priority_rules()
+
+
+@router.get("/automation/priority-adjustments")
+def get_priority_adjustments() -> list[dict]:
+    """优先级调整记录。"""
+    return _ai_service.get_priority_adjustments()
+
+
+@router.get("/automation/summary")
+def get_automation_summary() -> dict:
+    """自动化执行概览（日维度）。"""
+    return _ai_service.get_automation_summary()
+
+
+# ───── 商务洞察 ─────
+
+@router.get("/business/leads")
+def get_business_leads() -> list[dict]:
+    """企业合作线索列表。"""
+    return _ai_service.get_business_leads()
+
+
+@router.get("/business/industries")
+def get_industry_shares() -> list[dict]:
+    """行业分布。"""
+    return _ai_service.get_industry_shares()
+
+
+@router.get("/business/signals")
+def get_market_signals() -> list[dict]:
+    """市场动向信号。"""
+    return _ai_service.get_market_signals()
+
+
+@router.get("/business/common-needs")
+def get_common_needs() -> list[dict]:
+    """共性需求归纳。"""
+    return _ai_service.get_common_needs()
+
+
+@router.get("/business/summary")
+def get_business_summary() -> dict:
+    """商务洞察总览。"""
+    return _ai_service.get_business_summary()

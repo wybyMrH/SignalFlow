@@ -283,3 +283,4 @@ SignalFlow/
 | 版本 | 日期 | 里程碑 |
 |------|------|--------|
 | v0.1.0 | 2026-10-15 | 前端 Mock 全流程闭环：12 页面 + 运营驾驶舱 + AI 联动 + 工作流配置 + 访谈→线索联动 + Store 守卫修复；Docker 容器化部署验证通过；文档体系（规格/状态/计划/ADR）落盘 |
+| v0.2.0 | 2026-10-15 | 后端分层架构落地：Stage-0 基础设施与公共抽象层；Stage-1 十二大 Domain ORM + Repository + Alembic 迁移 + pytest CRUD 全量通过；Stage-2 Service 层全量测试通过；Stage-3 LLM 网关（LiteLLM）与 LangGraph AI 工作流全量测试通过（43/43）；渠道适配器扩展点（工单/邮件/IM/访谈/政务热线）就绪；数据种子与集成测试覆盖补齐 |

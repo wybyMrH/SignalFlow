@@ -4,6 +4,7 @@
 - GET /agents         预置 Agent 列表（AgentStatus）
 - GET /agents/tools   Agent 可配置工具目录（AgentToolDef）
 - GET /skills/catalog Skill 目录（SkillDef）
+- PUT /agents/{id}/scenario  更新 Agent 角色提示词
 """
 
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 from app.core.database import get_db
 from app.services.agents import AgentService
 from fastapi import APIRouter, Depends
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -71,3 +73,24 @@ def list_skill_catalog(service=Depends(_service)) -> list[dict]:
         }
         for skill in service.list_skills()
     ]
+
+
+class ScenarioUpdate(BaseModel):
+    scenario: str
+
+
+@router.put("/agents/{agent_id}/scenario")
+def update_agent_scenario(
+    agent_id: str,
+    payload: ScenarioUpdate,
+    service=Depends(_service),
+) -> dict:
+    """更新 Agent 角色提示词（scenario）。"""
+    agent = service.get(agent_id)
+    agent.scenario = payload.scenario
+    service._commit()
+    return {
+        "code": "SUCCESS",
+        "message": "Agent 提示词已更新",
+        "data": _agent_to_dict(agent),
+    }

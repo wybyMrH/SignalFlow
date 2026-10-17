@@ -319,10 +319,63 @@ export interface ChannelStatus {
   note: string
 }
 
+/** 系统设置 - LLM / API 配置 */
+export interface LLMConfig {
+  provider: string
+  model: string
+  api_key_mask: string
+  temperature: number
+  max_tokens: number
+  timeout_seconds: number
+}
+
+/** 系统设置 - 邮件提醒配置 */
+export interface EmailConfig {
+  enabled: boolean
+  smtp_server: string
+  smtp_port: number
+  sender: string
+  password_mask: string
+}
+
+/** 系统设置 - 外观 / AI 气泡主题 */
+export interface AppearanceConfig {
+  ai_bubble_theme: string
+}
+
+/** 系统设置 - 全局模型微调参数 */
+export interface GlobalModelParams {
+  context_window: number
+  tone: string
+}
+
+/** 系统设置 - Agent 角色提示词概览 */
+export interface AgentPromptConfig {
+  id: string
+  name: string
+  category: string | null
+  scenario: string
+  enabled: boolean
+}
+
+/** 系统设置 - 服务器配置 */
+export interface ServerConfig {
+  app_env: string
+  app_host: string
+  app_port: number
+  log_level: string
+}
+
 /** 系统设置视图 */
 export interface SettingsView {
   mock_mode: boolean
   channels: ChannelStatus[]
+  llm: LLMConfig
+  email: EmailConfig
+  appearance: AppearanceConfig
+  global_model_params: GlobalModelParams
+  server: ServerConfig
+  agent_prompts: AgentPromptConfig[]
   ai_note: string
   auth_note: string
   updated_at: string

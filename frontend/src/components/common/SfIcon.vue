@@ -52,6 +52,9 @@ export type IconName =
   | 'server'
   | 'workflow'
   | 'database'
+  | 'info'
+  | 'edit'
+  | 'palette'
 </script>
 
 <template>
@@ -284,6 +287,23 @@ export type IconName =
       <ellipse cx="12" cy="5.5" rx="8" ry="3" />
       <path d="M4 5.5v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V5.5" />
       <path d="M4 12v6.5c0 1.7 3.6 3 8 3s8-1.3 8-3V12" />
+    </template>
+    <!-- 信息：圆圈 + i -->
+    <template v-else-if="name === 'info'">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11.5V16M12 8h.01" />
+    </template>
+    <!-- 编辑：铅笔 -->
+    <template v-else-if="name === 'edit'">
+      <path d="M4 20h5.5L20 9.5 14.5 4 4 14.5V20Z" />
+      <path d="m13.5 5 5.5 5.5" />
+    </template>
+    <!-- 调色板：AI 气泡主题 -->
+    <template v-else-if="name === 'palette'">
+      <path d="M12 3a9 9 0 0 0 0 18h1.5a1.5 1.5 0 0 0 1-2.6 1.5 1.5 0 0 1 1-2.6h3A2.5 2.5 0 0 0 21 13.3C21 7.6 17 3 12 3Z" />
+      <circle cx="7.5" cy="11" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="10" cy="7.5" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="14.5" cy="7.5" r="0.9" fill="currentColor" stroke="none" />
     </template>
   </svg>
 </template>

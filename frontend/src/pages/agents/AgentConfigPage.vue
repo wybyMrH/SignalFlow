@@ -45,6 +45,7 @@ const configOpen = ref(false)
 const configAgent = ref<AgentStatus | null>(null)
 const configTools = ref<string[]>([])
 const configWorkflows = ref<string[]>([])
+const configScenario = ref('')
 
 const categoryTone: Record<string, 'info' | 'success' | 'warning' | 'neutral' | 'danger'> = {
   内容生成: 'info',
@@ -128,6 +129,7 @@ function openConfig(a: AgentStatus) {
   configAgent.value = a
   configTools.value = catalog.value.filter((t) => a.tools.includes(t.name)).map((t) => t.key)
   configWorkflows.value = [...a.bound_workflow_ids]
+  configScenario.value = a.scenario || ''
   configOpen.value = true
 }
 
@@ -136,6 +138,7 @@ function saveConfig() {
   if (!a) return
   a.tools = catalog.value.filter((t) => configTools.value.includes(t.key)).map((t) => t.name)
   a.bound_workflow_ids = [...configWorkflows.value]
+  a.scenario = configScenario.value.trim() || a.scenario
   configOpen.value = false
 }
 
@@ -370,8 +373,17 @@ const skillOwnerNames = (ids: string[]) =>
     </Drawer>
 
     <!-- 配置 Agent 抽屉 -->
-    <Drawer :open="configOpen" :title="`配置 ${configAgent?.name ?? ''}`" :width="520" @close="configOpen = false">
+    <Drawer :open="configOpen" :title="`配置 ${configAgent?.name ?? ''}`" :width="560" @close="configOpen = false">
       <div v-if="configAgent" class="drawer-form">
+        <label class="field">
+          <span class="field-label">角色提示词（scenario）</span>
+          <textarea
+            v-model="configScenario"
+            rows="5"
+            placeholder="定义该 Agent 的角色、职责边界与输出要求..."
+          />
+          <span class="field-hint">提示词影响该 Agent 在分类、研判与生成回复时的行为边界。</span>
+        </label>
         <div class="field">
           <span class="field-label">工具调用权限</span>
           <div v-for="g in groupedTools" :key="g.category" class="tool-group">
@@ -797,6 +809,11 @@ const skillOwnerNames = (ids: string[]) =>
   flex-shrink: 0;
 }
 .check-desc {
+  color: var(--sf-text-faint);
+  line-height: 1.4;
+}
+.field-hint {
+  font-size: 11px;
   color: var(--sf-text-faint);
   line-height: 1.4;
 }

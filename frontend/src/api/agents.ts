@@ -42,3 +42,12 @@ export async function fetchSkillCatalog(): Promise<SkillDef[]> {
   const { data } = await http.get<SkillDef[]>('/skills/catalog')
   return data
 }
+
+/** 更新 Agent 角色提示词（系统设置入口；真实契约 PUT /agents/{id}/scenario） */
+export async function updateAgentScenario(agentId: string, scenario: string): Promise<void> {
+  if (useMock()) {
+    await mockDelay(null, 300)
+    return
+  }
+  await http.put(`/agents/${agentId}/scenario`, { scenario })
+}

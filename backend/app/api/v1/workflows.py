@@ -48,12 +48,15 @@ def _run_to_dict(run: Any) -> dict[str, Any]:
 
 @router.get("")
 def list_workflows(service=Depends(_service)) -> list[dict]:
-    """工作流模板列表（含最新运行状态）。"""
+    """工作流模板列表（含最新运行状态与运行历史）。"""
     workflows = service.list()
+    runs_by_workflow = service.recent_runs_grouped()
     result = []
     for wf in workflows:
         item = _workflow_to_dict(wf)
-        # 骨架阶段：模拟运行状态；真实运行记录由 WorkflowRunRepository 查询
+        # 真实运行记录由 WorkflowRunRepository 查询，对齐前端 WorkflowDetail.history 契约
+        item["history"] = [_run_to_dict(r) for r in runs_by_workflow.get(wf.id, [])]
+        # 骨架阶段：模拟运行状态
         item["last_run"] = {
             "status": "completed" if not wf.enabled else "running",
             "progress": 100 if not wf.enabled else 67,

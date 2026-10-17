@@ -10,6 +10,7 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
+from app.core.database import SessionLocal
 from app.core.logging import get_logger
 from app.schemas.ai import AIAutomationRule, AIChatMessage, AIWorkflowStatus
 
@@ -493,7 +494,35 @@ class AIService:
     # ───── 商务洞察（企业合作线索与市场动向） ─────
 
     def get_business_leads(self) -> list[dict[str, Any]]:
-        """企业合作线索列表（对齐前端 BusinessLead）。"""
+        """企业合作线索列表（优先数据库，无数据回退 mock）。"""
+        from app.models.business import BusinessLead
+        from sqlalchemy import select
+
+        session = SessionLocal()
+        try:
+            rows = session.execute(select(BusinessLead)).scalars().all()
+            if rows:
+                return [
+                    {
+                        "id": r.id,
+                        "feedback_id": r.feedback_id,
+                        "content": r.content,
+                        "company_name": r.company_name,
+                        "industry": r.industry,
+                        "company_type": r.company_type,
+                        "size_band": r.size_band,
+                        "matched_product": r.matched_product,
+                        "match_reason": r.match_reason,
+                        "value_score": r.value_score,
+                        "confidence": (r.confidence or 0) / 100,
+                        "stage": r.stage,
+                        "created_at": r.created_at.isoformat() if r.created_at else None,
+                    }
+                    for r in rows
+                ]
+        finally:
+            session.close()
+        # fallback mock
         now = datetime.utcnow()
         return [
             {
@@ -570,7 +599,30 @@ class AIService:
         ]
 
     def get_market_signals(self) -> list[dict[str, Any]]:
-        """市场动向信号（对齐前端 MarketSignal）。"""
+        """市场动向信号（优先数据库，无数据回退 mock）。"""
+        from app.models.business import MarketSignal
+        from sqlalchemy import select
+
+        session = SessionLocal()
+        try:
+            rows = session.execute(select(MarketSignal)).scalars().all()
+            if rows:
+                return [
+                    {
+                        "id": r.id,
+                        "title": r.title,
+                        "type": r.type,
+                        "summary": r.summary,
+                        "evidence_count": r.evidence_count,
+                        "severity": r.severity,
+                        "related_industries": r.related_industries or [],
+                        "created_at": r.created_at.isoformat() if r.created_at else None,
+                    }
+                    for r in rows
+                ]
+        finally:
+            session.close()
+        # fallback mock
         now = datetime.utcnow()
         return [
             {
@@ -616,7 +668,31 @@ class AIService:
         ]
 
     def get_common_needs(self) -> list[dict[str, Any]]:
-        """共性需求归纳（对齐前端 CommonNeed）。"""
+        """共性需求归纳（优先数据库，无数据回退 mock）。"""
+        from app.models.business import CommonNeed
+        from sqlalchemy import select
+
+        session = SessionLocal()
+        try:
+            rows = session.execute(select(CommonNeed)).scalars().all()
+            if rows:
+                return [
+                    {
+                        "id": r.id,
+                        "title": r.title,
+                        "description": r.description,
+                        "feedback_count": r.feedback_count,
+                        "customer_count": r.customer_count,
+                        "industries": r.industries or [],
+                        "product_potential": r.product_potential,
+                        "priority": r.priority,
+                        "status": r.status,
+                    }
+                    for r in rows
+                ]
+        finally:
+            session.close()
+        # fallback mock
         return [
             {
                 "id": "CN-001",
@@ -665,7 +741,36 @@ class AIService:
         ]
 
     def get_business_summary(self) -> dict[str, Any]:
-        """商务洞察总览（对齐前端 BusinessInsightSummary）。"""
+        """商务洞察总览（优先数据库，无数据回退 mock）。"""
+        from app.models.business import BusinessLead, CommonNeed, MarketSignal
+        from sqlalchemy import select
+
+        session = SessionLocal()
+        try:
+            leads = session.execute(select(BusinessLead)).scalars().all()
+            signals = session.execute(select(MarketSignal)).scalars().all()
+            needs = session.execute(select(CommonNeed)).scalars().all()
+            if leads or signals or needs:
+                total_leads = len(leads)
+                qualified = sum(1 for lead in leads if lead.stage == "qualified")
+                pushed = sum(1 for lead in leads if lead.stage == "pushed")
+                today = datetime.utcnow().date()
+                start = today - timedelta(days=29)
+                return {
+                    "total_leads": total_leads,
+                    "qualified_leads": qualified,
+                    "pushed_leads": pushed,
+                    "industry_count": 6,
+                    "total_feedback_count": 136,
+                    "customer_count": 58,
+                    "market_signal_count": len(signals),
+                    "common_need_count": len(needs),
+                    "report_period": f"{start.isoformat()} ~ {today.isoformat()}",
+                    "generated_at": datetime.utcnow().isoformat(),
+                }
+        finally:
+            session.close()
+        # fallback mock
         today = datetime.utcnow().date()
         start = today - timedelta(days=29)
         return {

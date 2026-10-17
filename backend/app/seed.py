@@ -23,6 +23,7 @@ from app.models.roadmap import RoadmapItem, TaskItem, ReplyDraft
 from app.models.resource import ServerState, DatabaseState, ApiEndpointState, SystemLogEntry, ResourceAlert
 from app.models.setting import ChannelConfig, Setting
 from app.models.automation import AutomationRule
+from app.models.business import BusinessLead, CommonNeed, MarketSignal
 
 # 确定性 UUID 命名空间（便于重复运行生成同一 UUID）
 _NS = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")  # DNS namespace
@@ -41,9 +42,6 @@ def _dt(iso: str | None) -> datetime | None:
 
 
 def _seed_feedbacks(session: Session) -> None:
-    if session.execute(select(Feedback).limit(1)).scalar():
-        print("[seed] feedbacks already seeded, skip")
-        return
     rows = [
         {"id": "F1001", "tenant_id": "demo-gov", "source": "hotline", "source_ref": "HM-0930-001", "content": "上午九点在一楼大厅排队取号，等了四十分钟才轮到，叫号屏还跳过了好几个号，老人站着干着急。", "author": "王梅", "status": "closed", "sentiment": "negative", "priority": 5, "topic_id": "t2", "topic_title": "大厅等候时间过长", "reviewer": "张莉", "created_at": "2026-09-30T09:12:00Z", "updated_at": "2026-10-02T15:40:00Z", "reply_content": "您好，您反映的“大厅等候时间过长”问题我们已收悉并核实处理，给您带来不便深表歉意。后续我们将持续优化服务流程与体验，感谢您的理解与支持。如有疑问可拨打服务热线详询。", "replied_at": "2026-10-02T15:40:00Z"},
         {"id": "F1002", "tenant_id": "demo-gov", "source": "portal", "source_ref": None, "content": "从东门进来绕了两圈才找到停车场入口，路上没有任何指示牌，办完事出来又找不到车了。", "author": "李强", "status": "resolved", "sentiment": "neutral", "priority": 2, "topic_id": "t7", "topic_title": "停车与指引不清晰", "reviewer": "陈曦", "created_at": "2026-09-30T11:05:00Z", "updated_at": "2026-10-02T09:20:00Z"},
@@ -109,10 +107,18 @@ def _seed_feedbacks(session: Session) -> None:
         {"id": "F1062", "tenant_id": "demo-gov", "source": "hotline", "source_ref": "HM-1014-030", "content": "大厅排队时间太长了，每次都等一个多小时，能不能多开几个窗口？", "author": "林晓", "status": "ai_replied", "sentiment": "negative", "priority": 4, "topic_id": "t2", "topic_title": "大厅等候时间过长", "reviewer": "AI自动审批", "created_at": "2026-10-14T10:00:00Z", "updated_at": "2026-10-14T16:10:00Z", "reply_content": "您好，您反映的“大厅等候时间过长”问题我们已收悉并核实处理，给您带来不便深表歉意。后续我们将持续优化服务流程与体验，感谢您的理解与支持。如有疑问可拨打服务热线详询。", "replied_at": "2026-10-14T16:10:00Z"},
         {"id": "F1063", "tenant_id": "demo-gov", "source": "portal", "source_ref": None, "content": "我想咨询一下生育津贴的申领条件，需要连续缴费多久？", "author": "周婷", "status": "ai_reviewing", "sentiment": "neutral", "priority": 2, "topic_id": "t4", "topic_title": "政策咨询响应偏慢", "reviewer": "AI助手", "created_at": "2026-10-14T15:30:00Z", "updated_at": "2026-10-14T16:15:00Z"},
         {"id": "F1064", "tenant_id": "demo-gov", "source": "ticket", "source_ref": "GD-1014-020", "content": "APP 闪退问题怎么处理？已经更新了最新版本还是不行。", "author": "吴刚", "status": "ai_replied", "sentiment": "negative", "priority": 3, "topic_id": "t8", "topic_title": "移动端 APP 操作不便", "reviewer": "AI自动审批", "created_at": "2026-10-14T11:20:00Z", "updated_at": "2026-10-14T16:20:00Z", "reply_content": "您好，您反映的“移动端 APP 操作不便”问题我们已收悉并核实处理，给您带来不便深表歉意。后续我们将持续优化服务流程与体验，感谢您的理解与支持。如有疑问可拨打服务热线详询。", "replied_at": "2026-10-14T16:20:00Z"},
+        {"id": "F1101", "tenant_id": "demo-ent", "source": "sales", "source_ref": None, "content": "我们公司有 400 多名设计师，现在每人单独建账号太麻烦，希望支持批量导入和角色分组。", "author": "林倩", "status": "analyzing", "sentiment": "neutral", "priority": 4, "topic_id": "t9", "topic_title": "企业批量账号管理", "reviewer": "商务组", "created_at": "2026-10-12T09:00:00Z", "updated_at": "2026-10-12T09:00:00Z"},
+        {"id": "F1102", "tenant_id": "demo-ent", "source": "sales", "source_ref": None, "content": "作为外包承接方，客户要求我们提供本地化部署版本，敏感数据不能出我们的机房。", "author": "陈奕帆", "status": "analyzing", "sentiment": "neutral", "priority": 5, "topic_id": "t10", "topic_title": "私有化部署需求", "reviewer": "商务组", "created_at": "2026-10-11T09:00:00Z", "updated_at": "2026-10-11T09:00:00Z"},
+        {"id": "F1103", "tenant_id": "demo-ent", "source": "sales", "source_ref": None, "content": "我们是省属国企，需要和内部 OA、统一认证对接，账号体系要对齐集团标准。", "author": "孙杰", "status": "analyzing", "sentiment": "neutral", "priority": 4, "topic_id": "t11", "topic_title": "统一认证对接", "reviewer": "商务组", "created_at": "2026-10-10T09:00:00Z", "updated_at": "2026-10-10T09:00:00Z"},
+        {"id": "F1104", "tenant_id": "demo-ent", "source": "sales", "source_ref": None, "content": "当前产品缺少审计日志导出，合规团队要求完整操作留痕，否则无法过等保三级。", "author": "周敏", "status": "analyzing", "sentiment": "negative", "priority": 5, "topic_id": "t12", "topic_title": "审计日志与合规", "reviewer": "商务组", "created_at": "2026-10-09T09:00:00Z", "updated_at": "2026-10-09T09:00:00Z"},
     ]
     for r in rows:
+        uid = _uuid(f"feedback-{r['id']}")
+        existing = session.execute(select(Feedback).where(Feedback.id == uid)).scalar()
+        if existing:
+            continue
         session.add(Feedback(
-            id=_uuid(f"feedback-{r['id']}"),
+            id=uid,
             tenant_id=r["tenant_id"],
             source=r["source"],
             source_ref=r.get("source_ref"),
@@ -130,7 +136,7 @@ def _seed_feedbacks(session: Session) -> None:
             updated_at=_dt(r["updated_at"]),
         ))
     session.commit()
-    print(f"[seed] inserted {len(rows)} feedbacks")
+    print(f"[seed] feedbacks upsert done")
 
 
 def _seed_insight_topics(session: Session) -> None:
@@ -603,7 +609,7 @@ def _seed_settings(session: Session) -> None:
             ChannelConfig(id="CC-003", key="review", label="评价中心", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 20, 0, tzinfo=timezone.utc), incoming=7, note="评价中心已对接", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
             ChannelConfig(id="CC-004", key="hotline", label="热线录音", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 15, 0, tzinfo=timezone.utc), incoming=11, note="热线录音转写待接 LLM", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
             ChannelConfig(id="CC-005", key="interview", label="客户访谈", enabled=True, connected=False, last_sync=None, incoming=0, note="访谈为线下导入，未接自动同步", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-006", key="sales", label="商务反馈", enabled=False, connected=False, last_sync=None, incoming=0, note="商务侧反馈待开通", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
+            ChannelConfig(id="CC-006", key="sales", label="商务反馈", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc), incoming=5, note="商务侧反馈已接入，线索同步正常", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
         ]
         session.add_all(channels)
         session.commit()
@@ -625,6 +631,49 @@ def _seed_automation(session: Session) -> None:
     print(f"[seed] inserted {len(rules)} automation_rules")
 
 
+def _seed_business(session: Session) -> None:
+    # BusinessLead
+    if not session.execute(select(BusinessLead).limit(1)).scalar():
+        leads = [
+            BusinessLead(id="BL-001", feedback_id="F1101", content="我们公司有 400 多名设计师，现在每人单独建账号太麻烦，希望支持批量导入和角色分组。", company_name="云帆数字设计", industry="企业服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·批量账号管理", match_reason="反馈提及「批量导入 + 角色分组」，与企业版多人协作能力语义匹配", value_score=82, confidence=91, stage="pushed", created_at=datetime(2026, 10, 15, 16, 0, 0, tzinfo=timezone.utc)),
+            BusinessLead(id="BL-002", feedback_id="F1102", content="作为外包承接方，客户要求我们提供本地化部署版本，敏感数据不能出我们的机房。", company_name="中科软联", industry="软件外包", company_type="私企", size_band="200-500 人", matched_product="私有化部署包", match_reason="反馈提出「本地化部署 + 数据不出域」，匹配私有化版本需求", value_score=78, confidence=88, stage="qualified", created_at=datetime(2026, 10, 14, 16, 0, 0, tzinfo=timezone.utc)),
+            BusinessLead(id="BL-003", feedback_id="F1103", content="我们是省属国企，需要和内部 OA、统一认证对接，账号体系要对齐集团标准。", company_name="华东能源集团", industry="能源化工", company_type="国企", size_band="2000 人以上", matched_product="企业版·SSO/统一认证", match_reason="反馈提及「统一认证 + 集团账号标准」，匹配 SSO 集成能力", value_score=90, confidence=95, stage="pushed", created_at=datetime(2026, 10, 13, 16, 0, 0, tzinfo=timezone.utc)),
+            BusinessLead(id="BL-004", feedback_id="F1104", content="当前产品缺少审计日志导出，合规团队要求完整操作留痕，否则无法过等保三级。", company_name="数智科技", industry="数据服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·审计日志与合规报表", match_reason="反馈提出「审计日志 + 等保合规」刚需，匹配企业版审计能力", value_score=85, confidence=92, stage="identified", created_at=datetime(2026, 10, 12, 16, 0, 0, tzinfo=timezone.utc)),
+        ]
+        session.add_all(leads)
+        session.commit()
+        print(f"[seed] inserted {len(leads)} business_leads")
+    else:
+        print("[seed] business_leads already seeded, skip")
+
+    # MarketSignal
+    if not session.execute(select(MarketSignal).limit(1)).scalar():
+        signals = [
+            MarketSignal(id="MS-001", title="大型客户批量账号管理需求集中爆发", type="opportunity", summary="近期连续收到 4 条中大型企业反馈，均提到「批量导入成员 + 角色分组授权」诉求，说明该需求正从头部客户向腰部蔓延。", evidence_count=4, severity=3, related_industries=["企业服务", "教育", "智能制造"], created_at=datetime(2026, 10, 15, 10, 0, 0, tzinfo=timezone.utc)),
+            MarketSignal(id="MS-002", title="数据不出域成为政企客户准入硬门槛", type="risk", summary="连续 3 家客户明确要求私有化部署，若不能提供本地化方案，可能直接失去政企赛道。", evidence_count=3, severity=4, related_industries=["能源化工", "智能制造", "政务"], created_at=datetime(2026, 10, 14, 10, 0, 0, tzinfo=timezone.utc)),
+            MarketSignal(id="MS-003", title="国企客户统一认证对接需求增加", type="opportunity", summary="Q3 以来已有 2 家国企提出 SSO/OAuth2 对接诉求，预计 Q4 会进一步增多，建议优先排期。", evidence_count=2, severity=2, related_industries=["能源化工", "金融"], created_at=datetime(2026, 10, 13, 10, 0, 0, tzinfo=timezone.utc)),
+        ]
+        session.add_all(signals)
+        session.commit()
+        print(f"[seed] inserted {len(signals)} market_signals")
+    else:
+        print("[seed] market_signals already seeded, skip")
+
+    # CommonNeed
+    if not session.execute(select(CommonNeed).limit(1)).scalar():
+        needs = [
+            CommonNeed(id="CN-001", title="批量账号与角色管理", description="大型组织需要批量导入成员、按部门/角色分组授权，减少单账号逐个配置的运维成本。", feedback_count=34, customer_count=12, industries=["企业服务", "能源化工", "教育"], product_potential="企业版·批量账号与 RBAC 角色分组", priority=5, status="planned", created_at=datetime(2026, 10, 15, 10, 0, 0, tzinfo=timezone.utc)),
+            CommonNeed(id="CN-002", title="私有化与数据不出域部署", description="具备合规诉求的政企客户要求本地化部署，数据不允许离开自有机房或堡垒环境。", feedback_count=29, customer_count=9, industries=["智能制造", "能源化工"], product_potential="私有化部署包（Docker/K8s + 本地模型）", priority=5, status="open", created_at=datetime(2026, 10, 14, 10, 0, 0, tzinfo=timezone.utc)),
+            CommonNeed(id="CN-003", title="统一认证与集团账号对接", description="国企与大型集团要求对接内部 OA、统一身份认证，账号体系需对齐集团标准。", feedback_count=18, customer_count=7, industries=["能源化工", "智能制造"], product_potential="企业版·SSO/标准协议联调", priority=4, status="planned", created_at=datetime(2026, 10, 13, 10, 0, 0, tzinfo=timezone.utc)),
+            CommonNeed(id="CN-004", title="审计日志与合规报告", description="受 GDPR / 等保等约束的客户需要完整操作审计、留痕与合规导出能力。", feedback_count=27, customer_count=8, industries=["智能制造", "能源化工", "数据服务"], product_potential="企业版·审计日志与合规报表", priority=4, status="open", created_at=datetime(2026, 10, 12, 10, 0, 0, tzinfo=timezone.utc)),
+        ]
+        session.add_all(needs)
+        session.commit()
+        print(f"[seed] inserted {len(needs)} common_needs")
+    else:
+        print("[seed] common_needs already seeded, skip")
+
+
 def seed_all() -> None:
     session = SessionLocal()
     try:
@@ -638,6 +687,7 @@ def seed_all() -> None:
         _seed_resources(session)
         _seed_settings(session)
         _seed_automation(session)
+        _seed_business(session)
         print("[seed] all done")
     except Exception as e:
         session.rollback()

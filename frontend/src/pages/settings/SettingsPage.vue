@@ -300,7 +300,7 @@ async function savePrompt() {
 
     <template v-else-if="view">
       <!-- 渠道接入 -->
-      <section class="card">
+      <section class="card span-2">
         <div class="head">
           <h2 class="title">渠道接入</h2>
           <span class="sub">数据源连通状态与启停控制</span>
@@ -478,8 +478,21 @@ async function savePrompt() {
         </div>
       </section>
 
+      <!-- 数据源与权限说明 -->
+      <section class="card note">
+        <h3 class="title">数据源与权限说明</h3>
+        <dl class="kv">
+          <dt>数据源</dt>
+          <dd>{{ view.mock_mode ? '使用模拟数据（VITE_USE_MOCK 默认开启）' : '使用真实后端接口' }}</dd>
+          <dt>AI 洞察</dt>
+          <dd>{{ view.ai_note }}</dd>
+          <dt>身份认证</dt>
+          <dd>{{ view.auth_note }}</dd>
+        </dl>
+      </section>
+
       <!-- Agent 角色提示词 -->
-      <section class="card">
+      <section class="card span-2">
         <div class="head">
           <h2 class="title">Agent 角色提示词</h2>
           <span class="sub">快速调整各 Agent 的角色定义与场景边界</span>
@@ -509,19 +522,6 @@ async function savePrompt() {
           <SfIcon name="info" :size="12" />
           提示词修改即时生效，影响该 Agent 在自动分类、回复生成与趋势研判中的行为边界。
         </p>
-      </section>
-
-      <!-- 数据源与权限说明 -->
-      <section class="card note">
-        <h3 class="title">数据源与权限说明</h3>
-        <dl class="kv">
-          <dt>数据源</dt>
-          <dd>{{ view.mock_mode ? '使用模拟数据（VITE_USE_MOCK 默认开启）' : '使用真实后端接口' }}</dd>
-          <dt>AI 洞察</dt>
-          <dd>{{ view.ai_note }}</dd>
-          <dt>身份认证</dt>
-          <dd>{{ view.auth_note }}</dd>
-        </dl>
       </section>
     </template>
 
@@ -691,9 +691,15 @@ async function savePrompt() {
 
 <style scoped>
 .st {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sf-space-3);
+  align-items: start;
+}
+
+/* 跨全宽分区 */
+.span-2 {
+  grid-column: 1 / -1;
 }
 
 /* 消息条 */
@@ -876,6 +882,7 @@ async function savePrompt() {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 .theme-name {
   font-size: var(--sf-font-13);
@@ -1030,5 +1037,12 @@ async function savePrompt() {
 /* 说明卡片 */
 .note .title {
   margin-bottom: var(--sf-space-2);
+}
+
+/* 响应式：窄屏折叠为单列 */
+@media (max-width: 1100px) {
+  .st {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

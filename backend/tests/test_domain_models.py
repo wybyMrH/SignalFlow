@@ -6,6 +6,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlalchemy.orm import Session
 
@@ -346,8 +348,8 @@ def test_channel_config_crud(db: Session):
     _assert_crud(
         ChannelConfigRepository(db),
         ChannelConfig,
-        key='ticket',
-        label='工单系统',
+        key=f'channel-test-{uuid.uuid4().hex[:8]}',
+        label='测试渠道',
     )
 
 

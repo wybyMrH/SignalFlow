@@ -217,3 +217,16 @@ class WorkflowService(ServiceBase):
         run.ended_at = datetime.now(timezone.utc)
         self._commit()
         return run
+
+    def recent_runs_grouped(
+        self, *, limit: int = 30
+    ) -> dict[str, list[WorkflowRun]]:
+        """返回全部工作流的最近运行记录（按开始时间倒序），以 workflow_id 分组。
+
+        用于组装前端 WorkflowDetail.history 契约（工作流配置页 / 资源管理页告警联动）。
+        """
+        runs = self._run_repo.list_all(order_by=WorkflowRun.started_at.desc())
+        grouped: dict[str, list[WorkflowRun]] = {}
+        for run in runs:
+            grouped.setdefault(run.workflow_id, []).append(run)
+        return {key: value[:limit] for key, value in grouped.items()}

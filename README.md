@@ -98,11 +98,11 @@ docker compose up -d --build
 ```
 
 服务就绪后：
-- 前端：`http://localhost:8088`
-- 后端 API：`http://localhost:8000/api/v1`
-- 健康检查：`http://localhost:8000/api/v1/healthz`
+- **前端（纯 Mock）**：`http://localhost:8088` —— 独立演示环境，无需启动后端，所有数据由前端 mock 驱动
+- **后端 API**：`http://localhost:8000/api/v1` —— 仅作为 API 服务，不对外暴露 Web 页面
+- **健康检查**：`http://localhost:8000/api/v1/healthz`
 
-### 方式二：本地开发
+### 方式二：本地开发（推荐真实后端联调）
 
 **后端**
 
@@ -116,15 +116,19 @@ alembic upgrade head       # 需先启动 PostgreSQL
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**前端**
+**前端（真实后端联调）**
 
 ```bash
 cd frontend
 npm install
-npm run dev   # http://localhost:5173，/api 已代理到 8000
+# 默认端口 5199，/api 已代理到 localhost:8000（真实后端）
+npm run dev
 ```
 
-> **Mock 模式开发**：前端默认 `VITE_USE_MOCK=true`，无需启动后端即可完整演示全部功能；切换为 `false` 后直连后端，页面与 store 无需改动。
+> **双模式架构**：同一套前端代码同时支持「Mock 演示」与「真实后端」两种模式：
+> - **Mock 模式**（Docker 8088 / 前端默认）：`VITE_USE_MOCK=true` 或留空，无需后端即可完整演示全部页面与交互
+> - **真实后端模式**（5199 开发联调）：`.env.local` 中设 `VITE_USE_MOCK=false`，直连 localhost:8000 数据库持久化数据
+> - 两种模式页面结构、路由、UI 完全一致，仅数据源与数据生成逻辑不同，切换无需改动任何页面或 store 代码
 
 ---
 

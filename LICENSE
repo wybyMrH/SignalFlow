@@ -1,0 +1,85 @@
+# SignalFlow 授权与使用条款（自定义许可协议）
+
+版本 1.0 ｜ 生效日期：2026-10-18
+
+版权所有 (c) 2026 SignalFlow 作者（GitHub: @wybyMrH）。保留所有权利（All Rights Reserved）。
+
+本仓库（https://github.com/wybyMrH/SignalFlow，下称「本项目」）的源代码公开可见，但**并非以 OSI 认可的开源许可协议发布**。任何人获取、复制、使用、修改或分发本项目及其任何部分，均须遵守以下条款；不同意本条款的，请勿使用本项目。
+
+---
+
+## 一、允许的用途（免费，无需另行授权）
+
+1.1 个人学习、技术研究、教学演示与非商业性评估；
+
+1.2 在未对外提供商业服务的前提下，对本项目进行本地部署、试用与内部技术验证；
+
+1.3 上述用途下可自由阅读与复制源代码，但须完整保留本文件及源代码中所有的版权声明与作者署名。
+
+## 二、须事先取得书面授权的用途
+
+### 2.1 商业用途
+
+将本项目（或其部分、衍生版本）用于任何直接或间接获取商业利益的活动，包括但不限于：
+
+1. 集成进对外销售、出租、订阅或收费的产品与服务；
+2. 以 SaaS、云服务、托管等形式向第三方提供；
+3. 用于企业内部的经营性业务系统，或面向客户交付的项目；
+4. 基于本项目提供付费的技术支持、外包开发、培训或咨询。
+
+> 上述用途须**事先取得作者的书面授权（商业许可）**，未获授权不得使用。
+
+### 2.2 二次开发
+
+对本项目进行修改、改编、二次开发、衍生创作或重新打包，包括但不限于改名分发、抽取核心模块另建项目、生成衍生作品。
+
+> 上述行为须**在开始前取得作者同意**，未获同意不得进行。
+
+## 三、署名与引用要求
+
+3.1 任何经授权的使用、修改、分发或衍生作品，都必须在你的项目（含 README、项目文档、「关于」页面或同等显著位置）中**明确注明并引用本项目**，至少包含：
+
+- 项目名称：SignalFlow
+- 仓库地址：https://github.com/wybyMrH/SignalFlow
+- 说明文字示例：「本项目基于 / 使用了 SignalFlow（https://github.com/wybyMrH/SignalFlow）」
+
+3.2 不得移除、隐藏或篡改本项目中的版权声明、作者署名及本许可条款。
+
+3.3 不得以任何方式暗示本项目作者为你的项目、产品或服务背书。
+
+## 四、第三方组件
+
+本项目使用的第三方开源依赖（如 Vue、FastAPI 等）遵循其各自的许可协议，不受本条款约束；使用这些组件时请同时遵守其原始许可。
+
+## 五、免责声明
+
+本项目按「现状」提供，不附带任何明示或默示的担保，包括但不限于适销性、特定用途适用性与不侵权担保。因使用或无法使用本项目而产生的任何直接或间接损失，作者不承担任何责任。
+
+## 六、授权申请
+
+如需商业授权或二次开发许可，请通过以下方式联系作者，并说明：使用主体、用途与范围、分发方式、期限。
+
+- GitHub 仓库：https://github.com/wybyMrH/SignalFlow
+- 联系方式：请在该仓库提交 Issue，或通过仓库主页公开的联系方式与作者取得联系
+
+## 七、条款变更
+
+作者保留随时修订本条款的权利；修订后的条款自本文件更新之日起生效。已获授权的使用，以授权时约定的条款为准。
+
+---
+
+## English Notice (Summary)
+
+Copyright (c) 2026 SignalFlow authors (GitHub: @wybyMrH). All rights reserved.
+
+This repository is **source-available but NOT released under an OSI-approved open source license**.
+
+- **Free** for personal study, research, teaching and non-commercial evaluation.
+- **Commercial use** of any kind requires prior written permission from the author.
+- **Modification / derivative works / redistribution** requires prior consent from the author.
+- **Attribution is mandatory**: any permitted use must clearly credit and reference this project (name: SignalFlow, repository: https://github.com/wybyMrH/SignalFlow) in your project documentation.
+- The software is provided "AS IS", without warranty of any kind.
+
+For commercial licensing or derivative-work permission, please contact the author via the repository issue tracker.
+
+This summary is for convenience only; the Chinese text above prevails.

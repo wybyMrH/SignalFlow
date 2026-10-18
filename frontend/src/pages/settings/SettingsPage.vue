@@ -65,6 +65,7 @@ async function handleToggleChannel(key: string) {
     const ch = view.value.channels.find((c) => c.key === key)
     if (ch && res.data) {
       ch.enabled = res.data.enabled
+      ch.connected = res.data.connected
     }
     showMsg(res.message)
   } catch (e: any) {
@@ -221,7 +222,7 @@ async function saveTheme() {
 // 全局模型参数
 // ──────────────────────────────────────────────
 
-const globalEdit = ref({ context_window: 4096, tone: 'professional' })
+const globalEdit = ref({ context_window: 4096, max_output_tokens: 2048, top_p: 0.9, tone: 'professional' })
 const globalEditing = ref(false)
 
 const toneOptions = [
@@ -236,6 +237,8 @@ function openGlobalEdit() {
   if (!view.value) return
   globalEdit.value = {
     context_window: view.value.global_model_params.context_window,
+    max_output_tokens: view.value.global_model_params.max_output_tokens,
+    top_p: view.value.global_model_params.top_p,
     tone: view.value.global_model_params.tone,
   }
   globalEditing.value = true
@@ -247,6 +250,8 @@ async function saveGlobal() {
   try {
     await updateGlobalModelParams({
       context_window: globalEdit.value.context_window,
+      max_output_tokens: globalEdit.value.max_output_tokens,
+      top_p: globalEdit.value.top_p,
       tone: globalEdit.value.tone,
     })
     view.value.global_model_params = { ...globalEdit.value }
@@ -400,11 +405,11 @@ async function savePrompt() {
                 <button
                   type="button"
                   class="btn micro"
-                  :class="c.enabled ? 'danger-ghost' : 'primary-ghost'"
+                  :class="c.connected ? 'danger-ghost' : 'primary-ghost'"
                   :disabled="saving[`channel-${c.key}`]"
                   @click="handleToggleChannel(c.key)"
                 >
-                  {{ c.enabled ? '停用' : '启用' }}
+                  {{ c.connected ? '停用' : '启用' }}
                 </button>
               </td>
             </tr>
@@ -412,7 +417,7 @@ async function savePrompt() {
         </table>
         <p class="hint">
           <SfIcon name="info" :size="12" />
-          未连通 = 已启用但尚未建立数据同步；未启用 = 渠道已关闭，不再接收新反馈。
+          已接通 = 数据同步正常，可一键停用；未连通/未启用 = 数据尚未接入，点击启用即可接通。
         </p>
       </section>
 
@@ -542,6 +547,10 @@ async function savePrompt() {
         <dl class="kv">
           <dt>上下文窗口</dt>
           <dd>{{ view.global_model_params.context_window }}</dd>
+          <dt>最大输出长度</dt>
+          <dd>{{ view.global_model_params.max_output_tokens }}</dd>
+          <dt>核采样 (top_p)</dt>
+          <dd>{{ view.global_model_params.top_p }}</dd>
           <dt>生成语气</dt>
           <dd>
             {{ toneOptions.find((t) => t.value === view?.global_model_params.tone)?.label || view?.global_model_params.tone || '标准' }}
@@ -712,6 +721,16 @@ async function savePrompt() {
           <span class="field-label">上下文窗口</span>
           <input v-model.number="globalEdit.context_window" type="number" min="512" required />
           <span class="field-hint">决定单次请求可携带的最大 Token 数量</span>
+        </label>
+        <label class="field">
+          <span class="field-label">最大输出长度</span>
+          <input v-model.number="globalEdit.max_output_tokens" type="number" min="256" step="256" required />
+          <span class="field-hint">单次生成回复允许的最大 Token 数量上限</span>
+        </label>
+        <label class="field">
+          <span class="field-label">核采样 (top_p)</span>
+          <input v-model.number="globalEdit.top_p" type="number" min="0" max="1" step="0.05" required />
+          <span class="field-hint">控制候选词累积概率，取值越大生成越多样</span>
         </label>
         <label class="field">
           <span class="field-label">生成语气</span>
@@ -1070,10 +1089,10 @@ async function savePrompt() {
   color: var(--sf-text);
 }
 
-/* Agent 提示词列表 */
+/* Agent 提示词列表（三列并排，减少纵向占用、提升信息密度） */
 .agent-prompt-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--sf-space-2);
 }
 .agent-prompt-item {

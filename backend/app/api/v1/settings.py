@@ -57,6 +57,8 @@ class AppearanceConfigUpdate(BaseModel):
 
 class GlobalModelParamsUpdate(BaseModel):
     context_window: int | None = None
+    max_output_tokens: int | None = None
+    top_p: float | None = None
     tone: str | None = None
 
 
@@ -171,6 +173,10 @@ def get_settings(
         },
         "global_model_params": {
             "context_window": int(service.get_config_or("context_window", "4096")),
+            "max_output_tokens": int(
+                service.get_config_or("global_max_output_tokens", "2048")
+            ),
+            "top_p": float(service.get_config_or("global_top_p", "0.9")),
             "tone": service.get_config_or("model_tone", "professional"),
         },
         "server": {
@@ -257,6 +263,10 @@ def update_global_model_params(
     """更新全局模型微调参数。"""
     if payload.context_window is not None:
         service.set_config("context_window", str(payload.context_window))
+    if payload.max_output_tokens is not None:
+        service.set_config("global_max_output_tokens", str(payload.max_output_tokens))
+    if payload.top_p is not None:
+        service.set_config("global_top_p", str(payload.top_p))
     if payload.tone is not None:
         service.set_config("model_tone", payload.tone)
     return {"code": "SUCCESS", "message": "全局模型参数已更新"}

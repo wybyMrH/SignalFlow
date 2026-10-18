@@ -7,9 +7,26 @@
 
 import type { GovOverview } from '@/types'
 
+const mockUtc = (daysAgo: number, h: number, m: number) => {
+  const d = new Date()
+  d.setUTCDate(d.getUTCDate() - daysAgo)
+  d.setUTCHours(h, m, 0, 0)
+  return d.toISOString()
+}
+const timeStr = (daysAgo: number, h: number, m: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  d.setHours(h, m, 0, 0)
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(h)}:${p(m)}`
+}
+const dayStr = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`
+const periodStart = dayStr(new Date(Date.now() - 30 * 86400_000))
+const periodEnd = dayStr(new Date())
+
 export function buildGovOverview(): GovOverview {
   return {
-    period: '2026-09-16 ~ 2026-10-15',
+    period: `${periodStart} ~ ${periodEnd}`,
     generated_at: new Date().toISOString(),
     summary: {
       total_count: 48,
@@ -142,7 +159,7 @@ export function buildGovOverview(): GovOverview {
         channel: '短信 + APP 推送',
         sent_count: 1284,
         read_rate: 0.76,
-        updated_at: '2026-10-12T09:00:00Z',
+        updated_at: mockUtc(2, 9, 0),
       },
       {
         id: 'N4002',
@@ -153,7 +170,7 @@ export function buildGovOverview(): GovOverview {
         channel: '现场广播',
         sent_count: 0,
         read_rate: 0,
-        updated_at: '2026-10-14T10:30:00Z',
+        updated_at: mockUtc(0, 2, 30),
       },
       {
         id: 'N4003',
@@ -164,15 +181,15 @@ export function buildGovOverview(): GovOverview {
         channel: '政务网 + 短信',
         sent_count: 862,
         read_rate: 0.91,
-        updated_at: '2026-10-10T15:20:00Z',
+        updated_at: mockUtc(1, 7, 20),
       },
     ],
     audits: [
-      { id: 'A5001', action: '导出诉求分级报告', operator: '系统管理员', time: '2026-10-14 10:12', target: '诉求分级报表' },
-      { id: 'A5002', action: '发布政策告知', operator: '政务内容组-何静', time: '2026-10-12 09:01', target: 'N4001' },
-      { id: 'A5003', action: '修改督办状态', operator: '运营管理组-张莉', time: '2026-10-11 16:40', target: '二级督办-叫号跳号' },
-      { id: 'A5004', action: '生成治理任务', operator: '系统管理员', time: '2026-10-10 11:05', target: 'GT-2601 加装电梯' },
-      { id: 'A5005', action: '删除草稿', operator: '政务内容组-何静', time: '2026-10-09 14:22', target: '草稿-政策问答' },
+      { id: 'A5001', action: '导出诉求分级报告', operator: '系统管理员', time: timeStr(0, 10, 12), target: '诉求分级报表' },
+      { id: 'A5002', action: '发布政策告知', operator: '政务内容组-何静', time: timeStr(2, 9, 1), target: 'N4001' },
+      { id: 'A5003', action: '修改督办状态', operator: '运营管理组-张莉', time: timeStr(1, 16, 40), target: '二级督办-叫号跳号' },
+      { id: 'A5004', action: '生成治理任务', operator: '系统管理员', time: timeStr(1, 11, 5), target: 'GT-2601 加装电梯' },
+      { id: 'A5005', action: '删除草稿', operator: '政务内容组-何静', time: timeStr(2, 14, 22), target: '草稿-政策问答' },
     ],
     updated_at: new Date().toISOString(),
   }

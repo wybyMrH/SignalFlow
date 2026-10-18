@@ -190,7 +190,7 @@ function usePrompt(text: string) {
     </div>
 
     <div class="ai-disclaimer">
-      内容由 AI 生成，仅供参考，您据此所作判断及操作均由您自行承担责任。
+      AI 生成内容仅供参考，请谨慎判断。
     </div>
   </div>
 </template>

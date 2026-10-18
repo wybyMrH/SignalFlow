@@ -13,7 +13,7 @@ const props = defineProps<{
   height?: number
 }>()
 
-const W = 560
+const W = 640
 const H = computed(() => props.height ?? 160)
 const PAD = { top: 12, right: 12, bottom: 24, left: 30 }
 
@@ -65,8 +65,8 @@ const gridYs = computed(() => {
     <svg :viewBox="`0 0 ${W} ${H}`" class="trend-svg" role="img" aria-label="信号趋势图">
       <defs>
         <linearGradient id="sf-area" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="var(--sf-primary)" stop-opacity="0.14" />
-          <stop offset="100%" stop-color="var(--sf-primary)" stop-opacity="0" />
+          <stop offset="0%" stop-color="var(--sf-chart-a)" stop-opacity="0.12" />
+          <stop offset="100%" stop-color="var(--sf-chart-a)" stop-opacity="0" />
         </linearGradient>
       </defs>
       <!-- 网格 -->
@@ -82,7 +82,7 @@ const gridYs = computed(() => {
       <path :d="series.lineB" class="line line-b" />
       <!-- 数据点 tooltip -->
       <g v-for="d in series.dots" :key="d.label">
-        <circle :cx="d.cx" :cy="d.cy" r="2.5" class="dot dot-b" />
+        <circle :cx="d.cx" :cy="d.cy" r="2.2" class="dot dot-b" />
         <rect x="-2" y="-2" width="4" height="4" fill="transparent">
           <title>{{ d.label }} 反馈 {{ d.count }} / 已解决 {{ d.resolved }}</title>
         </rect>
@@ -136,22 +136,22 @@ const gridYs = computed(() => {
 }
 .line {
   fill: none;
-  stroke-width: 2;
+  stroke-width: 1.5;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 .line-a {
-  stroke: var(--sf-primary);
+  stroke: var(--sf-chart-a);
 }
 .line-b {
-  stroke: var(--sf-success);
+  stroke: var(--sf-chart-b);
 }
 .dot {
   fill: var(--sf-surface);
-  stroke-width: 1.5;
+  stroke-width: 1.2;
 }
 .dot-b {
-  stroke: var(--sf-success);
+  stroke: var(--sf-chart-b);
 }
 .legend {
   display: flex;
@@ -172,9 +172,9 @@ const gridYs = computed(() => {
   display: inline-block;
 }
 .sw-a {
-  background: var(--sf-primary);
+  background: var(--sf-chart-a);
 }
 .sw-b {
-  background: var(--sf-success);
+  background: var(--sf-chart-b);
 }
 </style>

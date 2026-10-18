@@ -9,12 +9,12 @@ import { sourceLabels } from '@/utils/labels'
 const RESOLVED_STATUSES: FeedbackStatus[] = ['resolved', 'replied', 'closed']
 const PENDING_STATUSES: FeedbackStatus[] = ['new', 'analyzing']
 
-/** 近 N 天（含今天）日期序列，UTC 日期键 */
+/** 近 N 天（含今天）日期序列，UTC 日期键（与反馈数据时间戳口径一致） */
 function recentDays(n: number): string[] {
   const days: string[] = []
   const now = new Date()
   for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i)
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - i))
     days.push(d.toISOString().slice(0, 10))
   }
   return days
@@ -51,13 +51,26 @@ export function computeDashboardMetrics(): DashboardMetrics {
     }))
     .sort((a, b) => b.count - a.count)
 
+  // 去重主题数：有归属主题的反馈涉及的不同主题数（与后端 InsightTopic 数量口径一致）
+  const dedupedTopics = new Set(feedbackDb.map((r) => r.topic_id).filter(Boolean)).size
+
+  // 平均解决时长：办结记录 updated_at - created_at 均值（小时，保留 1 位小数），与后端聚合口径一致
+  const hours: number[] = []
+  for (const r of feedbackDb) {
+    if (RESOLVED_STATUSES.includes(r.status)) {
+      const ms = new Date(r.updated_at).getTime() - new Date(r.created_at).getTime()
+      if (!Number.isNaN(ms)) hours.push(ms / 3_600_000)
+    }
+  }
+  const avgResolveHours = hours.length ? Math.round((hours.reduce((a, b) => a + b, 0) / hours.length) * 10) / 10 : 0
+
   return {
     total_feedbacks: total,
-    deduped_topics: 8,
+    deduped_topics: dedupedTopics,
     pending,
     resolved_today: resolvedToday,
     high_priority: highPriority,
-    avg_resolve_hours: 23.6,
+    avg_resolve_hours: avgResolveHours,
     mock_mode: true,
     updated_at: new Date().toISOString(),
     trend,

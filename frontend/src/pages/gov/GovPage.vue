@@ -19,18 +19,14 @@ import type { GovAlertLevel, GovOverview } from '@/types'
 const overview = ref<GovOverview | null>(null)
 const loading = ref(false)
 
-const activeTab = ref<
-  'classifications' | 'supervisions' | 'regions' | 'topics' | 'alerts' | 'notices' | 'audits'
->('classifications')
+const activeTab = ref<'plaints' | 'regions' | 'topics' | 'alerts' | 'notices'>('plaints')
 
 const tabs = [
-  { key: 'classifications' as const, label: '诉求分级', icon: 'label' as const },
-  { key: 'supervisions' as const, label: '督办事项', icon: 'shield' as const },
+  { key: 'plaints' as const, label: '诉求督办', icon: 'label' as const },
   { key: 'regions' as const, label: '区域分布', icon: 'map' as const },
   { key: 'topics' as const, label: '热点主题', icon: 'insights' as const },
   { key: 'alerts' as const, label: '舆情预警', icon: 'alert' as const },
-  { key: 'notices' as const, label: '政策告知', icon: 'megaphone' as const },
-  { key: 'audits' as const, label: '审计留痕', icon: 'file' as const },
+  { key: 'notices' as const, label: '通告审计', icon: 'megaphone' as const },
 ]
 
 const alertLevelLabel: Record<GovAlertLevel, string> = {
@@ -140,58 +136,54 @@ onMounted(async () => {
       </button>
     </div>
 
-    <!-- 面板 1：诉求分级 -->
-    <div v-if="activeTab === 'classifications'" class="panel">
+    <!-- 面板 1：诉求督办（诉求分级 + 督办事项） -->
+    <div v-if="activeTab === 'plaints'" class="panel">
       <div class="panel-head">
         <div class="panel-title">
           <SfIcon name="label" :size="14" />
-          诉求分级
+          诉求督办
         </div>
-        <div class="panel-sub">A 类即报 · 敏感优先 · 共 {{ overview?.classifications.length ?? 0 }} 级</div>
+        <div class="panel-sub">分级归口 · 逾期自动标红 · 联动治理任务闭环</div>
       </div>
       <Skeleton v-if="loading" :rows="6" />
-      <div v-else-if="overview" class="bars">
-        <BarRow
-          v-for="c in overview.classifications"
-          :key="c.level"
-          :label="`${c.level} ${c.label}`"
-          :value="c.count"
-          :pct="c.pct"
-          :tone="c.tone"
-        />
-      </div>
-    </div>
-
-    <!-- 面板 2：督办事项 -->
-    <div v-if="activeTab === 'supervisions'" class="panel">
-      <div class="panel-head">
-        <div class="panel-title">
-          <SfIcon name="shield" :size="14" />
-          督办事项
+      <template v-else-if="overview">
+        <div class="sub-block">
+          <div class="sub-title">诉求分级</div>
+          <div class="bars">
+            <BarRow
+              v-for="c in overview.classifications"
+              :key="c.level"
+              :label="`${c.level} ${c.label}`"
+              :value="c.count"
+              :pct="c.pct"
+              :tone="c.tone"
+            />
+          </div>
         </div>
-        <div class="panel-sub">逾期自动标红 · 联动治理任务闭环</div>
-      </div>
-      <Skeleton v-if="loading" :rows="6" />
-      <table v-else-if="overview" class="tbl">
-        <thead>
-          <tr>
-            <th>层级</th>
-            <th>事项</th>
-            <th>数量</th>
-            <th>逾期</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="s in overview.supervisions" :key="s.level">
-            <td class="nowrap">{{ s.level }}</td>
-            <td class="nowrap dim">{{ s.label }}</td>
-            <td class="num">{{ s.count }}</td>
-            <td>
-              <StatusBadge :label="String(s.overdue)" :tone="s.overdue > 0 ? 'danger' : 'success'" />
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <div class="sub-block">
+          <div class="sub-title">督办事项</div>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>层级</th>
+                <th>事项</th>
+                <th>数量</th>
+                <th>逾期</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="s in overview.supervisions" :key="s.level">
+                <td class="nowrap">{{ s.level }}</td>
+                <td class="nowrap dim">{{ s.label }}</td>
+                <td class="num">{{ s.count }}</td>
+                <td>
+                  <StatusBadge :label="String(s.overdue)" :tone="s.overdue > 0 ? 'danger' : 'success'" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </div>
 
     <!-- 面板 3：区域分布 -->
@@ -322,67 +314,63 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 面板 6：政策告知 -->
+    <!-- 面板 5：通告审计（政策告知 + 审计留痕） -->
     <div v-if="activeTab === 'notices'" class="panel">
       <div class="panel-head">
         <div class="panel-title">
           <SfIcon name="megaphone" :size="14" />
-          政策告知
+          通告审计
         </div>
-        <div class="panel-sub">公告直发渠道 · 送达与阅读统计</div>
+        <div class="panel-sub">公告送达统计 · 操作全程可追溯 · 数据不出域</div>
       </div>
       <Skeleton v-if="loading" :rows="6" />
-      <div v-else-if="overview" class="notice-list">
-        <div v-for="n in overview.notices" :key="n.id" class="notice-card">
-          <div class="notice-top">
-            <span class="notice-title">{{ n.title }}</span>
-            <StatusBadge
-              :label="n.status === 'published' ? '已发布' : '草稿'"
-              :tone="n.status === 'published' ? 'success' : 'warning'"
-            />
-          </div>
-          <p class="notice-content">{{ n.content }}</p>
-          <div class="notice-meta">
-            <span class="notice-scope">{{ n.scope }}</span>
-            <span class="notice-channel">
-              <SfIcon name="send" :size="12" />
-              {{ n.channel }}
-            </span>
-            <span class="notice-sent">送达 {{ n.sent_count }} 人</span>
-            <span v-if="n.status === 'published'" class="notice-read">阅读率 {{ rateText(n.read_rate) }}</span>
+      <template v-else-if="overview">
+        <div class="sub-block">
+          <div class="sub-title">政策告知</div>
+          <div class="notice-list">
+            <div v-for="n in overview.notices" :key="n.id" class="notice-card">
+              <div class="notice-top">
+                <span class="notice-title">{{ n.title }}</span>
+                <StatusBadge
+                  :label="n.status === 'published' ? '已发布' : '草稿'"
+                  :tone="n.status === 'published' ? 'success' : 'warning'"
+                />
+              </div>
+              <p class="notice-content">{{ n.content }}</p>
+              <div class="notice-meta">
+                <span class="notice-scope">{{ n.scope }}</span>
+                <span class="notice-channel">
+                  <SfIcon name="send" :size="12" />
+                  {{ n.channel }}
+                </span>
+                <span class="notice-sent">送达 {{ n.sent_count }} 人</span>
+                <span v-if="n.status === 'published'" class="notice-read">阅读率 {{ rateText(n.read_rate) }}</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-
-    <!-- 面板 7：审计留痕 -->
-    <div v-if="activeTab === 'audits'" class="panel">
-      <div class="panel-head">
-        <div class="panel-title">
-          <SfIcon name="file" :size="14" />
-          审计留痕
+        <div class="sub-block">
+          <div class="sub-title">审计留痕</div>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>操作</th>
+                <th>操作人</th>
+                <th>对象</th>
+                <th>时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="a in overview.audits" :key="a.id">
+                <td class="nowrap">{{ a.action }}</td>
+                <td class="nowrap dim">{{ a.operator }}</td>
+                <td class="nowrap dim">{{ a.target }}</td>
+                <td class="nowrap dim">{{ a.time }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-        <div class="panel-sub">操作全程可追溯 · 数据不出域</div>
-      </div>
-      <Skeleton v-if="loading" :rows="6" />
-      <table v-else-if="overview" class="tbl">
-        <thead>
-          <tr>
-            <th>操作</th>
-            <th>操作人</th>
-            <th>对象</th>
-            <th>时间</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in overview.audits" :key="a.id">
-            <td class="nowrap">{{ a.action }}</td>
-            <td class="nowrap dim">{{ a.operator }}</td>
-            <td class="nowrap dim">{{ a.target }}</td>
-            <td class="nowrap dim">{{ a.time }}</td>
-          </tr>
-        </tbody>
-      </table>
+      </template>
     </div>
   </div>
 
@@ -520,6 +508,17 @@ onMounted(async () => {
 .panel-sub {
   font-size: var(--sf-font-12);
   color: var(--sf-text-faint);
+}
+.sub-block + .sub-block {
+  margin-top: var(--sf-space-4);
+  padding-top: var(--sf-space-3);
+  border-top: 1px solid var(--sf-border);
+}
+.sub-title {
+  font-size: var(--sf-font-13);
+  font-weight: 600;
+  color: var(--sf-text);
+  margin-bottom: var(--sf-space-2);
 }
 
 /* 诉求分级 */
@@ -829,8 +828,8 @@ onMounted(async () => {
 
 /* 政策告知 */
 .notice-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sf-space-3);
 }
 .notice-card {
@@ -920,6 +919,9 @@ onMounted(async () => {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .alert-list {
+    grid-template-columns: 1fr;
+  }
+  .notice-list {
     grid-template-columns: 1fr;
   }
 }

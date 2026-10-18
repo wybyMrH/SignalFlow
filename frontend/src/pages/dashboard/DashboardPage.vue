@@ -113,7 +113,7 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
             <h2 class="card-title">信号趋势</h2>
             <span class="card-sub">{{ metrics ? `更新 ${formatDateTime(metrics.updated_at)}` : '' }}</span>
           </div>
-          <TrendChart v-if="metrics" :points="metrics.trend" :height="150" />
+          <TrendChart v-if="metrics" :points="metrics.trend" :height="120" />
           <Skeleton v-else :rows="3" />
         </section>
 
@@ -293,18 +293,17 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   grid-template-columns: 1fr 380px;
   gap: var(--sf-space-3);
   min-height: 0;
-  align-items: start;
 }
 .data-area {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-3);
   min-height: 0;
+  max-height: calc(100vh - var(--sf-header-h) - 136px);
 }
 .ai-area {
   min-height: 0;
-  height: 100%;
-  max-height: calc(100vh - var(--sf-header-h) - 140px);
+  height: calc(100vh - var(--sf-header-h) - 136px);
   position: sticky;
   top: var(--sf-space-3);
 }
@@ -350,12 +349,26 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
   text-decoration: underline;
 }
 
-/* 双栏 */
+/* 双栏：撑满左列剩余高度，内容超出时卡片内部滚动 */
 .duo {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sf-space-3);
   min-height: 0;
+  flex: 1;
+  min-height: 220px;
+}
+.duo .card {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.duo .mini-list,
+.duo .signal-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 .mini-list {
   list-style: none;

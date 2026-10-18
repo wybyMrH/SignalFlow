@@ -6,6 +6,10 @@
 import type { ReplyDraft, RoadmapBoard, RoadmapItem, TaskItem, TaskStatus, DraftStatus } from '@/types'
 import { feedbackDb } from './feedbackDb'
 
+const daysAgoIso = (n: number) => new Date(Date.now() - n * 86400_000).toISOString()
+const hoursAgoIso = (n: number) => new Date(Date.now() - n * 3600_000).toISOString()
+const dateFromToday = (n: number) => new Date(Date.now() + n * 86400_000).toISOString().slice(0, 10)
+
 export const roadmapItems: RoadmapItem[] = [
   {
     id: 'R2001',
@@ -14,10 +18,10 @@ export const roadmapItems: RoadmapItem[] = [
     status: 'in_progress',
     version: 'v1.2',
     owner: '数据治理组',
-    due_date: '2026-11-15',
+    due_date: dateFromToday(28),
     progress: 45,
     task_count: 4,
-    created_at: '2026-09-20T08:00:00Z',
+    created_at: daysAgoIso(28),
   },
   {
     id: 'R2002',
@@ -26,10 +30,10 @@ export const roadmapItems: RoadmapItem[] = [
     status: 'planning',
     version: 'v1.3',
     owner: '运营管理组',
-    due_date: '2026-12-01',
+    due_date: dateFromToday(44),
     progress: 0,
     task_count: 2,
-    created_at: '2026-10-01T08:00:00Z',
+    created_at: daysAgoIso(17),
   },
   {
     id: 'R2003',
@@ -38,10 +42,10 @@ export const roadmapItems: RoadmapItem[] = [
     status: 'scheduled',
     version: 'v1.1',
     owner: '平台研发组',
-    due_date: '2026-10-25',
+    due_date: dateFromToday(7),
     progress: 20,
     task_count: 3,
-    created_at: '2026-10-05T08:00:00Z',
+    created_at: daysAgoIso(13),
   },
   {
     id: 'R2004',
@@ -50,26 +54,26 @@ export const roadmapItems: RoadmapItem[] = [
     status: 'released',
     version: 'v1.0',
     owner: '政务内容组',
-    due_date: '2026-09-30',
+    due_date: dateFromToday(-18),
     progress: 100,
     task_count: 3,
-    created_at: '2026-08-15T08:00:00Z',
+    created_at: daysAgoIso(64),
   },
 ]
 
 export const roadmapTasks: TaskItem[] = [
-  { id: 'TK1001', roadmap_id: 'R2001', title: '材料目录对齐（13 个高频事项）', status: 'done', owner: '数据治理组', priority: 1, created_at: '2026-09-22T08:00:00Z' },
-  { id: 'TK1002', roadmap_id: 'R2001', title: '电子材料库接口联调', status: 'doing', owner: '平台研发组', priority: 1, created_at: '2026-09-28T08:00:00Z' },
-  { id: 'TK1003', roadmap_id: 'R2001', title: '窗口免提交规则试点', status: 'doing', owner: '运营管理组', priority: 2, created_at: '2026-10-06T08:00:00Z' },
-  { id: 'TK1004', roadmap_id: 'R2001', title: '线上清单与线下口径统一', status: 'todo', owner: '政务内容组', priority: 2, created_at: '2026-10-10T08:00:00Z' },
-  { id: 'TK1005', roadmap_id: 'R2002', title: '高峰时段取号数据分析', status: 'todo', owner: '运营管理组', priority: 1, created_at: '2026-10-08T08:00:00Z' },
-  { id: 'TK1006', roadmap_id: 'R2002', title: '动态开窗规则评审', status: 'todo', owner: '运营管理组', priority: 3, created_at: '2026-10-11T08:00:00Z' },
-  { id: 'TK1007', roadmap_id: 'R2003', title: '预约数据每日快照备份', status: 'doing', owner: '平台研发组', priority: 1, created_at: '2026-10-09T08:00:00Z' },
-  { id: 'TK1008', roadmap_id: 'R2003', title: '短信提醒补偿任务', status: 'todo', owner: '平台研发组', priority: 2, created_at: '2026-10-12T08:00:00Z' },
-  { id: 'TK1009', roadmap_id: 'R2003', title: '改签幂等与重试修复', status: 'todo', owner: '平台研发组', priority: 1, created_at: '2026-10-13T08:00:00Z' },
-  { id: 'TK1010', roadmap_id: 'R2004', title: '政策问答语料整理', status: 'done', owner: '政务内容组', priority: 1, created_at: '2026-08-20T08:00:00Z' },
-  { id: 'TK1011', roadmap_id: 'R2004', title: '问答系统评测通过', status: 'done', owner: '平台研发组', priority: 2, created_at: '2026-09-10T08:00:00Z' },
-  { id: 'TK1012', roadmap_id: 'R2004', title: '对外发布与值班培训', status: 'done', owner: '运营管理组', priority: 3, created_at: '2026-09-25T08:00:00Z' },
+  { id: 'TK1001', roadmap_id: 'R2001', title: '材料目录对齐（13 个高频事项）', status: 'done', owner: '数据治理组', priority: 1, created_at: daysAgoIso(26) },
+  { id: 'TK1002', roadmap_id: 'R2001', title: '电子材料库接口联调', status: 'doing', owner: '平台研发组', priority: 1, created_at: daysAgoIso(20) },
+  { id: 'TK1003', roadmap_id: 'R2001', title: '窗口免提交规则试点', status: 'doing', owner: '运营管理组', priority: 2, created_at: daysAgoIso(12) },
+  { id: 'TK1004', roadmap_id: 'R2001', title: '线上清单与线下口径统一', status: 'todo', owner: '政务内容组', priority: 2, created_at: daysAgoIso(8) },
+  { id: 'TK1005', roadmap_id: 'R2002', title: '高峰时段取号数据分析', status: 'todo', owner: '运营管理组', priority: 1, created_at: daysAgoIso(10) },
+  { id: 'TK1006', roadmap_id: 'R2002', title: '动态开窗规则评审', status: 'todo', owner: '运营管理组', priority: 3, created_at: daysAgoIso(7) },
+  { id: 'TK1007', roadmap_id: 'R2003', title: '预约数据每日快照备份', status: 'doing', owner: '平台研发组', priority: 1, created_at: daysAgoIso(9) },
+  { id: 'TK1008', roadmap_id: 'R2003', title: '短信提醒补偿任务', status: 'todo', owner: '平台研发组', priority: 2, created_at: daysAgoIso(6) },
+  { id: 'TK1009', roadmap_id: 'R2003', title: '改签幂等与重试修复', status: 'todo', owner: '平台研发组', priority: 1, created_at: daysAgoIso(5) },
+  { id: 'TK1010', roadmap_id: 'R2004', title: '政策问答语料整理', status: 'done', owner: '政务内容组', priority: 1, created_at: daysAgoIso(59) },
+  { id: 'TK1011', roadmap_id: 'R2004', title: '问答系统评测通过', status: 'done', owner: '平台研发组', priority: 2, created_at: daysAgoIso(38) },
+  { id: 'TK1012', roadmap_id: 'R2004', title: '对外发布与值班培训', status: 'done', owner: '运营管理组', priority: 3, created_at: daysAgoIso(23) },
 ]
 
 export const replyDrafts: ReplyDraft[] = [
@@ -80,7 +84,7 @@ export const replyDrafts: ReplyDraft[] = [
     draft: '您好，抱歉给您带来不便。今日上午叫号系统临时故障已修复，我们对排队秩序问题已启动复盘，后续将增加故障应急广播与手工叫号预案，感谢您的反馈。',
     tone: '致歉+整改承诺',
     status: 'draft',
-    updated_at: '2026-10-14T10:20:00Z',
+    updated_at: hoursAgoIso(4),
   },
   {
     id: 'D3002',
@@ -89,7 +93,7 @@ export const replyDrafts: ReplyDraft[] = [
     draft: '您好，关于预约记录回滚问题我们正在核查数据链路，已为您恢复预约记录并短信通知，窗口将按恢复后的记录办理，给您造成不便非常抱歉。',
     tone: '致歉+处理进展',
     status: 'draft',
-    updated_at: '2026-10-13T11:05:00Z',
+    updated_at: hoursAgoIso(27),
   },
   {
     id: 'D3003',
@@ -98,7 +102,7 @@ export const replyDrafts: ReplyDraft[] = [
     draft: '您好，您反映的政策问答未回复与口径不一致问题已转政务内容组，将在 1 个工作日内统一口径并书面回复，感谢监督。',
     tone: '说明+时限承诺',
     status: 'approved',
-    updated_at: '2026-10-14T09:40:00Z',
+    updated_at: hoursAgoIso(5),
   },
 ]
 

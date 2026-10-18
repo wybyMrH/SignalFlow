@@ -154,40 +154,38 @@ function goRoadmap() {
           <StatusBadge :label="priorityLabels[selected.score_card.level]" :tone="levelTone[selected.score_card.level]" />
         </div>
 
-        <div class="grid2">
-          <div class="score-box">
-            <div class="score-nums">
-              <span class="score-total num">{{ selected.score_card.total }}</span>
-              <span class="score-max">/ {{ selected.score_card.max }}</span>
-            </div>
-            <div class="score-dims">
-              <div v-for="d in selected.score_card.dimensions" :key="d.key" class="dim-item">
-                <div class="dim-top">
-                  <span>{{ d.label }}</span>
-                  <span class="num">{{ d.score }}/{{ d.max }}</span>
-                </div>
-                <div class="dim-track">
-                  <div class="dim-fill" :style="{ width: `${(d.score / d.max) * 100}%` }" />
-                </div>
-                <span class="dim-note">{{ d.note }}</span>
+        <div class="score-box">
+          <div class="score-nums">
+            <span class="score-total num">{{ selected.score_card.total }}</span>
+            <span class="score-max">/ {{ selected.score_card.max }}</span>
+          </div>
+          <div class="score-dims">
+            <div v-for="d in selected.score_card.dimensions" :key="d.key" class="dim-item">
+              <div class="dim-top">
+                <span>{{ d.label }}</span>
+                <span class="num">{{ d.score }}/{{ d.max }}</span>
               </div>
+              <div class="dim-track">
+                <div class="dim-fill" :style="{ width: `${(d.score / d.max) * 100}%` }" />
+              </div>
+              <span class="dim-note">{{ d.note }}</span>
             </div>
           </div>
+        </div>
 
-          <div class="evidence">
-            <h3 class="sec-title">证据链</h3>
-            <ul class="ev-list">
-              <li v-for="e in selected.evidence" :key="e.feedback_id" class="ev">
-                <div class="ev-top">
-                  <span class="ev-id">{{ e.feedback_id }}</span>
-                  <StatusBadge :label="sentimentLabels[e.sentiment]" :tone="sentimentTone[e.sentiment]" />
-                  <span class="ev-src">{{ sourceLabels[e.source] }}</span>
-                </div>
-                <p class="ev-text">{{ e.excerpt }}</p>
-                <span class="ev-meta">{{ e.author }} · {{ formatDate(e.created_at) }}</span>
-              </li>
-            </ul>
-          </div>
+        <div class="evidence">
+          <h3 class="sec-title">证据链</h3>
+          <ul class="ev-list">
+            <li v-for="e in selected.evidence" :key="e.feedback_id" class="ev">
+              <div class="ev-top">
+                <span class="ev-id">{{ e.feedback_id }}</span>
+                <StatusBadge :label="sentimentLabels[e.sentiment]" :tone="sentimentTone[e.sentiment]" />
+                <span class="ev-src">{{ sourceLabels[e.source] }}</span>
+              </div>
+              <p class="ev-text">{{ e.excerpt }}</p>
+              <span class="ev-meta">{{ e.author }} · {{ formatDate(e.created_at) }}</span>
+            </li>
+          </ul>
         </div>
 
         <div class="case-sec">
@@ -320,20 +318,18 @@ function goRoadmap() {
   flex-direction: column;
   gap: var(--sf-space-3);
 }
-.grid2 {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: var(--sf-space-4);
-}
 .score-box {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  align-items: center;
+  gap: var(--sf-space-4);
   border: 1px solid var(--sf-border);
   border-radius: var(--sf-radius);
-  padding: var(--sf-space-3);
+  padding: var(--sf-space-3) var(--sf-space-4);
 }
 .score-nums {
   display: flex;
   align-items: baseline;
-  margin-bottom: var(--sf-space-3);
 }
 .score-total {
   font-size: var(--sf-font-24);
@@ -345,8 +341,8 @@ function goRoadmap() {
   color: var(--sf-text-faint);
 }
 .score-dims {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--sf-space-3);
 }
 .dim-item {
@@ -384,13 +380,15 @@ function goRoadmap() {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sf-space-2) var(--sf-space-3);
 }
 .ev {
-  padding: var(--sf-space-2) 0;
-  border-bottom: 1px solid var(--sf-border);
-}
-.ev:last-child {
-  border-bottom: none;
+  padding: var(--sf-space-2) var(--sf-space-3);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  background: var(--sf-bg);
 }
 .ev-top {
   display: flex;
@@ -537,7 +535,13 @@ function goRoadmap() {
   .ins {
     grid-template-columns: 1fr;
   }
-  .grid2 {
+  .score-box {
+    grid-template-columns: 1fr;
+  }
+  .score-dims {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ev-list {
     grid-template-columns: 1fr;
   }
   .case-grid {

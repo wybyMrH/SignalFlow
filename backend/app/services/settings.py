@@ -114,9 +114,15 @@ class SettingsService(ServiceBase):
         return list(self._channel_repo.list_all())  # type: ignore[arg-type]
 
     def toggle_channel(self, key: str) -> ChannelConfig:
-        """切换渠道启用/停用状态。"""
+        """切换渠道启用/停用状态。
+
+        以连通状态为准：已接通渠道执行停用（断开同步），
+        未连通/未启用渠道执行启用（视为完成接入）。
+        """
         channel = self._find_channel(key)
-        channel.enabled = not channel.enabled
+        next_state = not channel.connected
+        channel.enabled = next_state
+        channel.connected = next_state
         self._commit()
         return channel
 

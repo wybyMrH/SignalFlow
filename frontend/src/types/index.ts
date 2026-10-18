@@ -346,6 +346,8 @@ export interface AppearanceConfig {
 /** 系统设置 - 全局模型微调参数 */
 export interface GlobalModelParams {
   context_window: number
+  max_output_tokens: number
+  top_p: number
   tone: string
 }
 

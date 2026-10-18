@@ -66,11 +66,13 @@ export async function updateNotesConfig(payload: { ai_note?: string; auth_note?:
   await http.put('/settings/notes', payload)
 }
 
-/** 切换渠道启用 / 停用 */
+/** 切换渠道启用 / 停用（以连通状态为准：已接通 → 停用断开；未接通/未启用 → 一键启用并接通） */
 export async function toggleChannel(key: string): Promise<{ code: string; message: string; data: { key: string; enabled: boolean; connected: boolean } }> {
   if (useMock()) {
     await mockDelay(null, 300)
-    return { code: 'SUCCESS', message: '渠道状态已切换', data: { key, enabled: true, connected: true } }
+    const ch = mockSettings().channels.find((c) => c.key === key)
+    const next = !(ch?.connected ?? false)
+    return { code: 'SUCCESS', message: next ? '渠道已启用并接通' : '渠道已停用', data: { key, enabled: next, connected: next } }
   }
   const { data } = await http.put(`/settings/channels/${key}/toggle`)
   return data

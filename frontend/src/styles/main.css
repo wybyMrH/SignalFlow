@@ -20,6 +20,9 @@
   --sf-text-faint: #94a3b8;
   --sf-success: #22c55e;
   --sf-success-soft: #ecfdf5;
+  /* 图表折线色（适中，避免过深刺眼） */
+  --sf-chart-a: #3b82f6;
+  --sf-chart-b: #10b981;
   --sf-warning: #f59e0b;
   --sf-warning-soft: #fffbeb;
   --sf-danger: #ef4444;
@@ -73,6 +76,9 @@ html.dark {
   --sf-text-faint: #64748b;
   --sf-success: #4ade80;
   --sf-success-soft: #052e16;
+  /* 深色主题图表折线色 */
+  --sf-chart-a: #60a5fa;
+  --sf-chart-b: #34d399;
   --sf-warning: #fbbf24;
   --sf-warning-soft: #451a03;
   --sf-danger: #f87171;

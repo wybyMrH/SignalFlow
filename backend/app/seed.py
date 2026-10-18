@@ -6,10 +6,12 @@
 """
 
 import os
+import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.core.database import SessionLocal
@@ -39,6 +41,110 @@ def _dt(iso: str | None) -> datetime | None:
     if iso.endswith("Z"):
         iso = iso[:-1] + "+00:00"
     return datetime.fromisoformat(iso)
+
+
+def _now() -> datetime:
+    """当前 UTC 时间（演示数据统一时间基准）。"""
+    return datetime.now(timezone.utc)
+
+
+def _ago(*, days: int = 0, hours: int = 0, minutes: int = 0) -> datetime:
+    """相对当前时间向前偏移，保证演示数据始终落在最近时间窗口内。"""
+    return _now() - timedelta(days=days, hours=hours, minutes=minutes)
+
+
+def _at(days_ago: int, hour: int, minute: int) -> datetime:
+    """取「最近 N 天」中的某个 UTC 时刻（与前端 mocks 的 mockUtc 口径一致）。"""
+    base = _now() - timedelta(days=days_ago)
+    return base.replace(hour=hour, minute=minute, second=0, microsecond=0)
+
+
+def _ref_day(days_ago: int) -> str:
+    """source_ref 的 MMDD 日期前缀，与创建时间保持同一天。"""
+    return (_now() - timedelta(days=days_ago)).strftime("%m%d")
+
+
+# 反馈时间相对映射：id -> ((created_days_ago, hour, minute), (updated_days_ago, hour, minute))
+# 与 frontend/src/mocks/feedbackDb.ts 的 mockUtc 偏移逐条对齐，保证 8088(mock) 与 5199(seed) 两端一致。
+FB_REL_TIME: dict[str, tuple[tuple[int, int, int], tuple[int, int, int]]] = {
+    "F1001": ((2, 1, 12), (1, 5, 40)),
+    "F1002": ((2, 3, 5), (2, 8, 20)),
+    "F1003": ((2, 6, 22), (2, 8, 10)),
+    "F1004": ((2, 8, 45), (2, 8, 45)),
+    "F1005": ((2, 0, 30), (1, 3, 12)),
+    "F1006": ((2, 5, 20), (2, 7, 0)),
+    "F1007": ((2, 7, 1), (1, 8, 30)),
+    "F1008": ((2, 9, 48), (1, 2, 22)),
+    "F1009": ((2, 2, 15), (2, 2, 15)),
+    "F1010": ((2, 3, 35), (2, 6, 40)),
+    "F1011": ((2, 6, 8), (2, 6, 8)),
+    "F1012": ((2, 8, 52), (1, 4, 1)),
+    "F1013": ((1, 6, 26), (1, 8, 32)),
+    "F1014": ((2, 5, 40), (1, 2, 15)),
+    "F1015": ((2, 7, 19), (2, 7, 19)),
+    "F1016": ((2, 9, 3), (1, 2, 20)),
+    "F1017": ((2, 3, 41), (1, 8, 5)),
+    "F1018": ((2, 5, 55), (1, 4, 33)),
+    "F1019": ((2, 7, 37), (2, 7, 37)),
+    "F1020": ((2, 9, 28), (2, 9, 28)),
+    "F1021": ((2, 8, 50), (1, 2, 0)),
+    "F1022": ((2, 3, 44), (1, 2, 50)),
+    "F1023": ((1, 5, 16), (1, 5, 16)),
+    "F1024": ((1, 8, 2), (1, 8, 30)),
+    "F1025": ((1, 1, 30), (1, 1, 30)),
+    "F1026": ((1, 3, 22), (0, 6, 44)),
+    "F1027": ((1, 6, 9), (0, 1, 25)),
+    "F1028": ((1, 7, 58), (1, 7, 58)),
+    "F1029": ((1, 2, 5), (1, 4, 30)),
+    "F1030": ((1, 5, 28), (0, 2, 12)),
+    "F1031": ((1, 7, 35), (1, 7, 35)),
+    "F1032": ((1, 9, 20), (1, 9, 20)),
+    "F1033": ((1, 1, 48), (1, 3, 15)),
+    "F1034": ((1, 3, 14), (1, 6, 0)),
+    "F1035": ((1, 6, 2), (1, 6, 2)),
+    "F1036": ((1, 8, 33), (1, 8, 33)),
+    "F1037": ((1, 1, 55), (1, 3, 5)),
+    "F1038": ((1, 4, 16), (1, 7, 30)),
+    "F1039": ((1, 6, 41), (1, 6, 41)),
+    "F1040": ((1, 8, 58), (1, 8, 58)),
+    "F1041": ((1, 2, 37), (1, 4, 45)),
+    "F1042": ((1, 5, 21), (1, 5, 21)),
+    "F1043": ((1, 7, 44), (0, 2, 28)),
+    "F1044": ((1, 9, 9), (0, 1, 20)),
+    "F1045": ((0, 1, 12), (0, 1, 12)),
+    "F1046": ((0, 3, 26), (0, 3, 26)),
+    "F1047": ((0, 6, 50), (0, 8, 35)),
+    "F1048": ((0, 9, 37), (0, 9, 37)),
+    "F1049": ((0, 1, 8), (0, 1, 8)),
+    "F1050": ((0, 3, 3), (0, 3, 3)),
+    "F1051": ((0, 7, 32), (0, 7, 32)),
+    "F1052": ((0, 0, 55), (0, 0, 55)),
+    "F1053": ((0, 2, 44), (0, 2, 44)),
+    "F1054": ((0, 6, 17), (0, 6, 17)),
+    "F1055": ((0, 1, 20), (0, 1, 20)),
+    "F1056": ((0, 2, 6), (0, 2, 6)),
+    "F1057": ((0, 3, 35), (0, 4, 0)),
+    "F1058": ((0, 5, 52), (0, 5, 52)),
+    "F1059": ((0, 1, 12), (0, 7, 20)),
+    "F1060": ((0, 2, 40), (0, 6, 5)),
+    "F1061": ((0, 8, 0), (0, 8, 5)),
+    "F1062": ((0, 2, 0), (0, 8, 10)),
+    "F1063": ((0, 7, 30), (0, 8, 15)),
+    "F1064": ((0, 3, 20), (0, 8, 20)),
+    "F1101": ((0, 9, 0), (0, 9, 0)),
+    "F1102": ((1, 9, 0), (1, 9, 0)),
+    "F1103": ((2, 9, 0), (2, 9, 0)),
+    "F1104": ((2, 10, 0), (2, 10, 0)),
+}
+
+# 反馈 UUID -> 原始 id，用于把洞察证据时间对齐到对应反馈的创建时间
+FB_UUID_TO_ID = {str(_uuid("feedback-%s" % k)): k for k in FB_REL_TIME}
+
+
+def _fb_created_at(feedback_uuid: str) -> datetime:
+    """按反馈 UUID 取该反馈的相对创建时间（找不到时回退到 1 天前）。"""
+    fid = FB_UUID_TO_ID.get(str(feedback_uuid))
+    return _at(*FB_REL_TIME[fid][0]) if fid else _ago(days=1)
 
 
 def _seed_feedbacks(session: Session) -> None:
@@ -117,11 +223,17 @@ def _seed_feedbacks(session: Session) -> None:
         existing = session.execute(select(Feedback).where(Feedback.id == uid)).scalar()
         if existing:
             continue
+        # 时间与 source_ref 相对生成，保证反馈始终落在最近三天（与前端 mocks 口径一致）
+        created_rel, updated_rel = FB_REL_TIME[r["id"]]
+        source_ref = r.get("source_ref")
+        if source_ref:
+            parts = source_ref.rsplit("-", 2)
+            source_ref = f"{parts[0]}-{_ref_day(created_rel[0])}-{parts[-1]}"
         session.add(Feedback(
             id=uid,
             tenant_id=r["tenant_id"],
             source=r["source"],
-            source_ref=r.get("source_ref"),
+            source_ref=source_ref,
             content=r["content"],
             author=r.get("author"),
             status=r["status"],
@@ -131,9 +243,9 @@ def _seed_feedbacks(session: Session) -> None:
             topic_title=r.get("topic_title"),
             reviewer=r.get("reviewer"),
             reply_content=r.get("reply_content"),
-            replied_at=_dt(r.get("replied_at")),
-            created_at=_dt(r["created_at"]),
-            updated_at=_dt(r["updated_at"]),
+            replied_at=_at(*updated_rel) if r.get("replied_at") else None,
+            created_at=_at(*created_rel),
+            updated_at=_at(*updated_rel),
         ))
     session.commit()
     print(f"[seed] feedbacks upsert done")
@@ -186,6 +298,9 @@ def _seed_insight_topics(session: Session) -> None:
         },
     ]
     for t in topics:
+        # 证据时间与对应反馈创建时间对齐（相对生成）
+        for ev in t["evidence"]:
+            ev["created_at"] = _fb_created_at(ev["feedback_id"]).isoformat().replace("+00:00", "Z")
         session.add(InsightTopic(
             id=t["id"],
             title=t["title"],
@@ -197,9 +312,9 @@ def _seed_insight_topics(session: Session) -> None:
             priority_score=t["priority_score"],
             score_card=t["score_card"],
             evidence=t["evidence"],
-            last_seen_at=_dt(t["evidence"][0]["created_at"]),
-            created_at=datetime(2026, 9, 30, 0, 0, 0, tzinfo=timezone.utc),
-            updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc),
+            last_seen_at=_fb_created_at(t["evidence"][0]["feedback_id"]),
+            created_at=_ago(days=48),
+            updated_at=_ago(hours=3),
         ))
     session.commit()
     print(f"[seed] inserted {len(topics)} insight_topics")
@@ -210,10 +325,10 @@ def _seed_gov(session: Session) -> None:
         print("[seed] gov_hot_topics already seeded, skip")
     else:
         topics = [
-            GovHotTopic(id="GT-2601", title="老旧小区加装电梯审批周期偏长", summary="居民对既有住宅加装电梯的审批流程、出资分摊与管线迁移意见集中，多部门协同耗时超过法定时限。", coverage=23, growth=42.0, regions=["玄武区", "鼓楼区"], department="住建局", root_cause="流程壁垒：规划、住建、属地街道分头审批，管线迁移缺乏牵头部门", evidence="「加了半年还在公示，说是管线迁移要等市政排期，到底谁牵头？」", task_status="generated", task_id="GT-2601-治理", created_at=datetime(2026, 10, 10, 11, 5, 0, tzinfo=timezone.utc)),
-            GovHotTopic(id="GT-2602", title="高校毕业生就业补贴申领门槛不清", summary="应届生对补贴对象、申领材料与到账周期疑问集中，线上线下答复口径存在不一致。", coverage=17, growth=28.0, regions=["栖霞区", "秦淮区"], department="人社局", root_cause="政策告知不足：细则更新后未同步各渠道，问答知识库滞后", evidence="「公告写的是毕业两年内，窗口又说按毕业证日期，到底按哪个？」", task_status="pending", created_at=datetime(2026, 10, 5, 0, 0, 0, tzinfo=timezone.utc)),
-            GovHotTopic(id="GT-2603", title="幼儿园入园学位缺口引发排队焦虑", summary="家长集中反映公办园学位不足、报名渠道扎堆，多个业主群出现转发焦虑情绪。", coverage=15, growth=35.0, regions=["秦淮区", "建邺区"], department="教育局", root_cause="供需缺口：片区学位规划滞后于人口导入，信息公开节奏慢", evidence="「同一时间只能报一个园，系统又卡，错过就没有学位了？」", task_status="pending", created_at=datetime(2026, 10, 3, 0, 0, 0, tzinfo=timezone.utc)),
-            GovHotTopic(id="GT-2604", title="政务大厅叫号等待时长上升", summary="窗口业务高峰时段排队超过 40 分钟，老年人不会线上预约导致到店返工。", coverage=11, growth=-8.0, regions=["鼓楼区"], department="政务办", root_cause="服务流程：高峰分流不足，线下引导与线上预约未打通", evidence="「取了号还要等一个小时，说好的一窗受理呢？」", task_status="pending", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
+            GovHotTopic(id="GT-2601", title="老旧小区加装电梯审批周期偏长", summary="居民对既有住宅加装电梯的审批流程、出资分摊与管线迁移意见集中，多部门协同耗时超过法定时限。", coverage=23, growth=42.0, regions=["玄武区", "鼓楼区"], department="住建局", root_cause="流程壁垒：规划、住建、属地街道分头审批，管线迁移缺乏牵头部门", evidence="「加了半年还在公示，说是管线迁移要等市政排期，到底谁牵头？」", task_status="generated", task_id="GT-2601-治理", created_at=_at(1, 11, 5)),
+            GovHotTopic(id="GT-2602", title="高校毕业生就业补贴申领门槛不清", summary="应届生对补贴对象、申领材料与到账周期疑问集中，线上线下答复口径存在不一致。", coverage=17, growth=28.0, regions=["栖霞区", "秦淮区"], department="人社局", root_cause="政策告知不足：细则更新后未同步各渠道，问答知识库滞后", evidence="「公告写的是毕业两年内，窗口又说按毕业证日期，到底按哪个？」", task_status="pending", created_at=_at(1, 9, 0)),
+            GovHotTopic(id="GT-2603", title="幼儿园入园学位缺口引发排队焦虑", summary="家长集中反映公办园学位不足、报名渠道扎堆，多个业主群出现转发焦虑情绪。", coverage=15, growth=35.0, regions=["秦淮区", "建邺区"], department="教育局", root_cause="供需缺口：片区学位规划滞后于人口导入，信息公开节奏慢", evidence="「同一时间只能报一个园，系统又卡，错过就没有学位了？」", task_status="pending", created_at=_at(2, 9, 0)),
+            GovHotTopic(id="GT-2604", title="政务大厅叫号等待时长上升", summary="窗口业务高峰时段排队超过 40 分钟，老年人不会线上预约导致到店返工。", coverage=11, growth=-8.0, regions=["鼓楼区"], department="政务办", root_cause="服务流程：高峰分流不足，线下引导与线上预约未打通", evidence="「取了号还要等一个小时，说好的一窗受理呢？」", task_status="pending", created_at=_at(2, 10, 0)),
         ]
         session.add_all(topics)
         session.commit()
@@ -223,10 +338,10 @@ def _seed_gov(session: Session) -> None:
         print("[seed] gov_alert_items already seeded, skip")
     else:
         alerts = [
-            GovAlertItem(id="BR-001", level="blue", title="停车收费调整咨询增多", summary="多小区业主群讨论新一轮道路停车收费调整，以咨询为主，暂未发现聚集风险。", trigger="敏感词「收费上涨」频次 +180%，情绪偏中性", regions=["建邺区"], evidence_count=6, dispatched=False, created_at=datetime(2026, 10, 12, 0, 0, 0, tzinfo=timezone.utc)),
-            GovAlertItem(id="YE-002", level="yellow", title="幼儿园学位舆情升温", summary="家长群转发热议学位缺口，出现「错过报名就没有学位」等焦虑表述，需口径统一。", trigger="异常量级 + 情绪分析呈焦虑主导", regions=["秦淮区", "建邺区"], evidence_count=15, dispatched=False, created_at=datetime(2026, 10, 11, 0, 0, 0, tzinfo=timezone.utc)),
-            GovAlertItem(id="OR-003", level="orange", title="电梯加装业主矛盾聚集", summary="同一小区低层业主联合反对加装方案，存在群体性事件苗头，建议属地提前介入。", trigger="集中爆发式诉求 + 对立情绪指数 0.72", regions=["玄武区"], evidence_count=9, dispatched=False, created_at=datetime(2026, 10, 10, 0, 0, 0, tzinfo=timezone.utc)),
-            GovAlertItem(id="RD-004", level="red", title="南部片区供暖管网故障影响面扩大", summary="供暖管线爆裂影响 3 个小区供热，伴随医疗与退费诉求，需应急抢修联动。", trigger="公共安全关键词 + 紧急件自动标记", regions=["雨花台区"], evidence_count=12, dispatched=True, dispatched_to="住建局应急专班", created_at=datetime(2026, 10, 9, 0, 0, 0, tzinfo=timezone.utc)),
+            GovAlertItem(id="BR-001", level="blue", title="停车收费调整咨询增多", summary="多小区业主群讨论新一轮道路停车收费调整，以咨询为主，暂未发现聚集风险。", trigger="敏感词「收费上涨」频次 +180%，情绪偏中性", regions=["建邺区"], evidence_count=6, dispatched=False, created_at=_at(2, 9, 0)),
+            GovAlertItem(id="YE-002", level="yellow", title="幼儿园学位舆情升温", summary="家长群转发热议学位缺口，出现「错过报名就没有学位」等焦虑表述，需口径统一。", trigger="异常量级 + 情绪分析呈焦虑主导", regions=["秦淮区", "建邺区"], evidence_count=15, dispatched=False, created_at=_at(1, 9, 0)),
+            GovAlertItem(id="OR-003", level="orange", title="电梯加装业主矛盾聚集", summary="同一小区低层业主联合反对加装方案，存在群体性事件苗头，建议属地提前介入。", trigger="集中爆发式诉求 + 对立情绪指数 0.72", regions=["玄武区"], evidence_count=9, dispatched=False, created_at=_at(1, 10, 0)),
+            GovAlertItem(id="RD-004", level="red", title="南部片区供暖管网故障影响面扩大", summary="供暖管线爆裂影响 3 个小区供热，伴随医疗与退费诉求，需应急抢修联动。", trigger="公共安全关键词 + 紧急件自动标记", regions=["雨花台区"], evidence_count=12, dispatched=True, dispatched_to="住建局应急专班", created_at=_at(0, 9, 0)),
         ]
         session.add_all(alerts)
         session.commit()
@@ -236,9 +351,9 @@ def _seed_gov(session: Session) -> None:
         print("[seed] gov_policy_notices already seeded, skip")
     else:
         notices = [
-            GovPolicyNotice(id="N4001", title="大厅高峰预约分流公告", content="10 月 15 日起 9:00-11:00 实行预约分流，请优先线上取号。", status="published", scope="全渠道", channel="短信 + APP 推送", sent_count=1284, read_rate=0.76, updated_at=datetime(2026, 10, 12, 9, 0, 0, tzinfo=timezone.utc)),
-            GovPolicyNotice(id="N4002", title="叫号系统故障应急说明", content="今日上午 9:20-10:05 叫号系统临时故障，已恢复正常。", status="draft", scope="大厅广播", channel="现场广播", sent_count=0, read_rate=0.0, updated_at=datetime(2026, 10, 14, 10, 30, 0, tzinfo=timezone.utc)),
-            GovPolicyNotice(id="N4003", title="就业补贴申领细则更新提醒", content="高校毕业生就业补贴申领细则已更新，请按最新材料清单申报。", status="published", scope="栖霞区 + 秦淮区", channel="政务网 + 短信", sent_count=862, read_rate=0.91, updated_at=datetime(2026, 10, 10, 15, 20, 0, tzinfo=timezone.utc)),
+            GovPolicyNotice(id="N4001", title="大厅高峰预约分流公告", content="10 月 15 日起 9:00-11:00 实行预约分流，请优先线上取号。", status="published", scope="全渠道", channel="短信 + APP 推送", sent_count=1284, read_rate=0.76, updated_at=_at(2, 9, 0)),
+            GovPolicyNotice(id="N4002", title="叫号系统故障应急说明", content="今日上午 9:20-10:05 叫号系统临时故障，已恢复正常。", status="draft", scope="大厅广播", channel="现场广播", sent_count=0, read_rate=0.0, updated_at=_at(0, 2, 30)),
+            GovPolicyNotice(id="N4003", title="就业补贴申领细则更新提醒", content="高校毕业生就业补贴申领细则已更新，请按最新材料清单申报。", status="published", scope="栖霞区 + 秦淮区", channel="政务网 + 短信", sent_count=862, read_rate=0.91, updated_at=_at(1, 7, 20)),
         ]
         session.add_all(notices)
         session.commit()
@@ -249,6 +364,8 @@ def _seed_interviews(session: Session) -> None:
     if session.execute(select(InterviewRecord).limit(1)).scalar():
         print("[seed] interview_records already seeded, skip")
         return
+    # 访谈日期相对生成，落在最近三天
+    rel_day = {"IV-001": 0, "IV-002": 1, "IV-003": 2, "IV-004": 1, "IV-005": 2, "IV-006": 2}
     rows = [
         {"id": "IV-001", "company_name": "云帆数字设计", "company_type": "私企", "industry": "企业服务", "contact_name": "林倩", "contact_role": "IT 负责人", "interview_date": "2026-10-14T09:00:00Z", "duration_min": 38, "source": "视频会议", "status": "linked", "summary": "设计团队 400+ 成员，期望按部门批量开通账号，同时希望管理员能看到成员活跃度以决定续费规模。", "key_points": ["每季度新增约 40 名外包设计师，逐个建号耗时约 3 人天", "需要角色分组权限模板，希望按项目隔离数据", "对续费定价敏感，正在对比竞品"], "extraction": {"pain_points": ["批量建号运维成本高", "希望角色级权限模板"], "needs": ["批量账号导入", "角色分组授权", "成员活跃度报表"], "cooperation_intent": "high", "matched_needs": ["批量账号与角色管理"], "lead_candidate": True, "lead_reason": "明确多次提及批量账号与角色分组能力，与企业版合作意向高", "extracted_at": "2026-10-14T10:00:00Z"}, "linked_feedback_ids": ["F1101"], "linked_lead_id": "BL-006", "recorder": "王雨桐"},
         {"id": "IV-002", "company_name": "中科软联", "company_type": "私企", "industry": "软件外包", "contact_name": "陈奕帆", "contact_role": "交付总监", "interview_date": "2026-10-13T09:00:00Z", "duration_min": 45, "source": "现场走访", "status": "extracted", "summary": "作为外包承接方，客户要求把反馈系统部署在自有机房，敏感数据不出域，同时希望提供私有化运维文档。", "key_points": ["甲方合同要求数据不出域，需本地化交付", "希望提供离线模型更新与运维手册", "正在评估 3 家供应商，预计 Q4 决策"], "extraction": {"pain_points": ["数据出域合规风险", "私有化运维人力不足"], "needs": ["本地化部署", "离线模型更新", "运维文档与培训"], "cooperation_intent": "high", "matched_needs": ["私有化与数据不出域部署"], "lead_candidate": True, "lead_reason": "合同明确私有化部署诉求且有采购周期，形成高意向线索", "extracted_at": "2026-10-13T10:00:00Z"}, "linked_feedback_ids": ["F1102"], "recorder": "王雨桐"},
@@ -265,7 +382,7 @@ def _seed_interviews(session: Session) -> None:
             industry=r.get("industry"),
             contact_name=r.get("contact_name"),
             contact_role=r.get("contact_role"),
-            interview_date=_dt(r.get("interview_date")),
+            interview_date=_at(rel_day[r["id"]], 9, 0),
             duration_min=r.get("duration_min", 0),
             source=r.get("source"),
             status=r["status"],
@@ -275,8 +392,8 @@ def _seed_interviews(session: Session) -> None:
             linked_feedback_ids=r.get("linked_feedback_ids"),
             linked_lead_id=r.get("linked_lead_id"),
             recorder=r.get("recorder"),
-            created_at=datetime(2026, 10, 9, 0, 0, 0, tzinfo=timezone.utc),
-            updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc),
+            created_at=_at(2, 8, 0),
+            updated_at=_ago(hours=3),
         ))
     session.commit()
     print(f"[seed] inserted {len(rows)} interview_records")
@@ -287,11 +404,11 @@ def _seed_agents(session: Session) -> None:
         print("[seed] agents already seeded, skip")
     else:
         agents = [
-            Agent(id="AG-001", name="政策公告 Agent", category="内容生成", scenario="根据政策变化自动草拟对外公告，联动发布公告工作流", enabled=True, tools=["查政策库", "生成公告稿", "发送通知"], bound_workflow_ids=["WF-PUBLISH-NOTICE"], run_count=126, reliability=96, last_run_at=datetime(2026, 10, 14, 16, 0, 0, tzinfo=timezone.utc), preset=True, created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            Agent(id="AG-002", name="商单回复 Agent", category="回复生成", scenario="对接企业商机与询价反馈，生成专业报价与跟进话术", enabled=True, tools=["查商务线索", "生成回复", "更新跟进状态"], bound_workflow_ids=["WF-LEAD-REPLY"], run_count=84, reliability=93, last_run_at=datetime(2026, 10, 14, 13, 0, 0, tzinfo=timezone.utc), preset=True, created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            Agent(id="AG-003", name="舆情聚类 Agent", category="分析研判", scenario="多条舆论指向同一论点时自动聚类，形成统一处置建议", enabled=True, tools=["文本聚类", "情感分析", "生成处置建议"], bound_workflow_ids=["WF-SENTIMENT-ALERT"], run_count=210, reliability=91, last_run_at=datetime(2026, 10, 14, 18, 0, 0, tzinfo=timezone.utc), preset=True, created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            Agent(id="AG-004", name="邻里诉求 Agent", category="诉求处置", scenario="专门处理邻里纠纷类诉求，按属地映射到社区网格", enabled=False, tools=["诉求分级", "属地派单", "生成回复"], bound_workflow_ids=["WF-NEIGHBOR-REQ"], run_count=32, reliability=88, last_run_at=datetime(2026, 10, 12, 19, 0, 0, tzinfo=timezone.utc), preset=True, created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            Agent(id="AG-005", name="反馈自动回复 Agent", category="回复生成", scenario="对高频咨询自动生成规范回复草稿，进入人工审批队列", enabled=True, tools=["知识库检索", "话术生成", "审批入队"], bound_workflow_ids=["WF-AUTO-REPLY"], run_count=402, reliability=97, last_run_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc), preset=True, created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
+            Agent(id="AG-001", name="政策公告 Agent", category="内容生成", scenario="根据政策变化自动草拟对外公告，联动发布公告工作流", enabled=True, tools=["查政策库", "生成公告稿", "发送通知"], bound_workflow_ids=["WF-PUBLISH-NOTICE"], run_count=126, reliability=96, last_run_at=_ago(hours=2), preset=True, created_at=_ago(days=45), updated_at=_ago(hours=3)),
+            Agent(id="AG-002", name="商单回复 Agent", category="回复生成", scenario="对接企业商机与询价反馈，生成专业报价与跟进话术", enabled=True, tools=["查商务线索", "生成回复", "更新跟进状态"], bound_workflow_ids=["WF-LEAD-REPLY"], run_count=84, reliability=93, last_run_at=_ago(hours=5), preset=True, created_at=_ago(days=45), updated_at=_ago(hours=3)),
+            Agent(id="AG-003", name="舆情聚类 Agent", category="分析研判", scenario="多条舆论指向同一论点时自动聚类，形成统一处置建议", enabled=True, tools=["文本聚类", "情感分析", "生成处置建议"], bound_workflow_ids=["WF-SENTIMENT-ALERT"], run_count=210, reliability=91, last_run_at=_ago(minutes=30), preset=True, created_at=_ago(days=45), updated_at=_ago(hours=3)),
+            Agent(id="AG-004", name="邻里诉求 Agent", category="诉求处置", scenario="专门处理邻里纠纷类诉求，按属地映射到社区网格", enabled=False, tools=["诉求分级", "属地派单", "生成回复"], bound_workflow_ids=["WF-NEIGHBOR-REQ"], run_count=32, reliability=88, last_run_at=_ago(days=2), preset=True, created_at=_ago(days=45), updated_at=_ago(hours=3)),
+            Agent(id="AG-005", name="反馈自动回复 Agent", category="回复生成", scenario="对高频咨询自动生成规范回复草稿，进入人工审批队列", enabled=True, tools=["知识库检索", "话术生成", "审批入队"], bound_workflow_ids=["WF-AUTO-REPLY"], run_count=402, reliability=97, last_run_at=_ago(minutes=0), preset=True, created_at=_ago(days=45), updated_at=_ago(hours=3)),
         ]
         session.add_all(agents)
         session.commit()
@@ -301,21 +418,21 @@ def _seed_agents(session: Session) -> None:
         print("[seed] agent_tools already seeded, skip")
     else:
         tools = [
-            AgentTool(id="T001", key="police-search", name="查政策库", category="检索", description="检索最新政策文件与解读，作为公告与回复的事实依据", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T002", key="db-query", name="查数据库", category="检索", description="按自然语言查询反馈库/工单库，聚合统计口径", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T003", key="kb-search", name="知识库检索", category="检索", description="检索产品知识库与历史回复，提升话术一致性", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T004", key="gov-compile", name="生成公告稿", category="生成", description="按政策主题与面向对象生成规范公告草稿", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T005", key="reply-gen", name="生成回复", category="生成", description="面向客户咨询/商单生成专业回复草稿", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T006", key="tone-gen", name="话术生成", category="生成", description="基于情感与对象调整沟通话术与语气", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T007", key="cluster", name="文本聚类", category="分析", description="对多条反馈/舆论做主题聚类，识别共性论点", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T008", key="sentiment", name="情感分析", category="分析", description="判断反馈与舆论的情感倾向与强度", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T009", key="advice-gen", name="生成处置建议", category="分析", description="综合聚类与情感结果生成统一处置建议", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T010", key="level-classify", name="诉求分级", category="处置", description="按紧急度/影响面/区域对诉求分级", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T011", key="dispatch", name="属地派单", category="处置", description="将诉求按属地/部门自动映射派单", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T012", key="approval-enqueue", name="审批入队", category="处置", description="将生成草稿推入人工审批队列并附加依据", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T013", key="lead-update", name="更新跟进状态", category="处置", description="更新商务线索跟进阶段与备注", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T014", key="notify", name="发送通知", category="通知", description="通过站内信/短信/公众号推送结果", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            AgentTool(id="T015", key="publish", name="发布公告", category="通知", description="将审批通过的公告发布到对内/对外渠道", created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
+            AgentTool(id="T001", key="police-search", name="查政策库", category="检索", description="检索最新政策文件与解读，作为公告与回复的事实依据", created_at=_ago(days=45)),
+            AgentTool(id="T002", key="db-query", name="查数据库", category="检索", description="按自然语言查询反馈库/工单库，聚合统计口径", created_at=_ago(days=45)),
+            AgentTool(id="T003", key="kb-search", name="知识库检索", category="检索", description="检索产品知识库与历史回复，提升话术一致性", created_at=_ago(days=45)),
+            AgentTool(id="T004", key="gov-compile", name="生成公告稿", category="生成", description="按政策主题与面向对象生成规范公告草稿", created_at=_ago(days=45)),
+            AgentTool(id="T005", key="reply-gen", name="生成回复", category="生成", description="面向客户咨询/商单生成专业回复草稿", created_at=_ago(days=45)),
+            AgentTool(id="T006", key="tone-gen", name="话术生成", category="生成", description="基于情感与对象调整沟通话术与语气", created_at=_ago(days=45)),
+            AgentTool(id="T007", key="cluster", name="文本聚类", category="分析", description="对多条反馈/舆论做主题聚类，识别共性论点", created_at=_ago(days=45)),
+            AgentTool(id="T008", key="sentiment", name="情感分析", category="分析", description="判断反馈与舆论的情感倾向与强度", created_at=_ago(days=45)),
+            AgentTool(id="T009", key="advice-gen", name="生成处置建议", category="分析", description="综合聚类与情感结果生成统一处置建议", created_at=_ago(days=45)),
+            AgentTool(id="T010", key="level-classify", name="诉求分级", category="处置", description="按紧急度/影响面/区域对诉求分级", created_at=_ago(days=45)),
+            AgentTool(id="T011", key="dispatch", name="属地派单", category="处置", description="将诉求按属地/部门自动映射派单", created_at=_ago(days=45)),
+            AgentTool(id="T012", key="approval-enqueue", name="审批入队", category="处置", description="将生成草稿推入人工审批队列并附加依据", created_at=_ago(days=45)),
+            AgentTool(id="T013", key="lead-update", name="更新跟进状态", category="处置", description="更新商务线索跟进阶段与备注", created_at=_ago(days=45)),
+            AgentTool(id="T014", key="notify", name="发送通知", category="通知", description="通过站内信/短信/公众号推送结果", created_at=_ago(days=45)),
+            AgentTool(id="T015", key="publish", name="发布公告", category="通知", description="将审批通过的公告发布到对内/对外渠道", created_at=_ago(days=45)),
         ]
         session.add_all(tools)
         session.commit()
@@ -325,13 +442,13 @@ def _seed_agents(session: Session) -> None:
         print("[seed] skills already seeded, skip")
     else:
         skills = [
-            Skill(id="SK-POLICY-COMPOSE", name="政务公告撰写", category="政务", description="基于政策库与公告模板撰写规范对外公告", enabled=True, owner_agent_ids=["AG-001"], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-LEAD-REPLY", name="商单报价回复", category="商务", description="结合产品目录生成报价与跟进话术", enabled=True, owner_agent_ids=["AG-002"], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-OPINION-CLUSTER", name="舆情聚类研判", category="分析", description="多条舆论论点聚类与情感研判，输出统一处置建议", enabled=True, owner_agent_ids=["AG-003"], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-NEIGHBOR-DISPATCH", name="邻里诉求派单", category="诉求处置", description="邻里纠纷分级与属地网格派单", enabled=True, owner_agent_ids=["AG-004"], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-FAQ-AUTOREPLY", name="高频咨询自动回复", category="回复生成", description="高频咨询知识库检索与话术生成", enabled=True, owner_agent_ids=["AG-005"], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-INTERVIEW-EXTRACT", name="访谈纪要提炼", category="分析", description="访谈纪要痛点/需求提炼，联动商务线索", enabled=True, owner_agent_ids=[], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
-            Skill(id="SK-SUPERVISION-REMIND", name="督办事项提醒", category="政务", description="超期与临期督办事项自动提醒与升级", enabled=False, owner_agent_ids=[], created_at=datetime(2026, 10, 1, 0, 0, 0, tzinfo=timezone.utc)),
+            Skill(id="SK-POLICY-COMPOSE", name="政务公告撰写", category="政务", description="基于政策库与公告模板撰写规范对外公告", enabled=True, owner_agent_ids=["AG-001"], created_at=_ago(days=45)),
+            Skill(id="SK-LEAD-REPLY", name="商单报价回复", category="商务", description="结合产品目录生成报价与跟进话术", enabled=True, owner_agent_ids=["AG-002"], created_at=_ago(days=45)),
+            Skill(id="SK-OPINION-CLUSTER", name="舆情聚类研判", category="分析", description="多条舆论论点聚类与情感研判，输出统一处置建议", enabled=True, owner_agent_ids=["AG-003"], created_at=_ago(days=45)),
+            Skill(id="SK-NEIGHBOR-DISPATCH", name="邻里诉求派单", category="诉求处置", description="邻里纠纷分级与属地网格派单", enabled=True, owner_agent_ids=["AG-004"], created_at=_ago(days=45)),
+            Skill(id="SK-FAQ-AUTOREPLY", name="高频咨询自动回复", category="回复生成", description="高频咨询知识库检索与话术生成", enabled=True, owner_agent_ids=["AG-005"], created_at=_ago(days=45)),
+            Skill(id="SK-INTERVIEW-EXTRACT", name="访谈纪要提炼", category="分析", description="访谈纪要痛点/需求提炼，联动商务线索", enabled=True, owner_agent_ids=[], created_at=_ago(days=45)),
+            Skill(id="SK-SUPERVISION-REMIND", name="督办事项提醒", category="政务", description="超期与临期督办事项自动提醒与升级", enabled=False, owner_agent_ids=[], created_at=_ago(days=45)),
         ]
         session.add_all(skills)
         session.commit()
@@ -360,7 +477,7 @@ def _seed_workflows(session: Session) -> None:
             ],
             agent_bindings={"n-draft": "AG-001", "n-review": "AG-001"},
             tool_chain={"n-scan": ["policy_search"], "n-send": ["send_email", "send_sms"]},
-            updated_at=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc),
+            updated_at=_ago(minutes=1),
         )
         wf_lead = Workflow(
             id="WF-LEAD-REPLY", name="商单自动回复", description="识别商务线索 → 匹配 Agent → 生成回复草稿 → 人工确认发送。",
@@ -379,7 +496,7 @@ def _seed_workflows(session: Session) -> None:
             ],
             agent_bindings={"n-reply": "AG-002", "n-confirm": "AG-002"},
             tool_chain={"n-match": ["lead_search"], "n-send": ["send_email"]},
-            updated_at=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc),
+            updated_at=_ago(minutes=1),
         )
         wf_auto = Workflow(
             id="WF-AUTO-REPLY", name="自动分类与去重", description="监听新增反馈 → AI 分类 → 去重组群 → 按优先级派单 → 生成待办。",
@@ -400,7 +517,7 @@ def _seed_workflows(session: Session) -> None:
             ],
             agent_bindings={"n-classify": "AG-005", "n-dedup": "AG-005"},
             tool_chain={"n-ingest": ["feedback_search"], "n-todo": ["create_todo"]},
-            updated_at=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc),
+            updated_at=_ago(minutes=1),
         )
         wf_sentiment = Workflow(
             id="WF-SENTIMENT-ALERT", name="舆情监测与应急", description="舆情定时扫描 → 情感异常检测 → 阈值触发 → 生成预警 → 通知负责人。",
@@ -421,7 +538,7 @@ def _seed_workflows(session: Session) -> None:
             ],
             agent_bindings={"n-sentiment": "AG-003", "n-alert": "AG-003"},
             tool_chain={"n-crawl": ["news_search"], "n-notify": ["send_email", "send_sms"]},
-            updated_at=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc),
+            updated_at=_ago(minutes=1),
         )
         wf_neighbor = Workflow(
             id="WF-NEIGHBOR-REQ", name="多源诉求聚合解决", description="汇聚热线/微信/网格化上报 → 去重聚类 → 智能分拨 → 跟踪闭环。",
@@ -442,7 +559,7 @@ def _seed_workflows(session: Session) -> None:
             ],
             agent_bindings={"n-dedup": "AG-004", "n-track": "AG-004"},
             tool_chain={"n-collect": ["feedback_search"], "n-archive": ["create_todo"]},
-            updated_at=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc),
+            updated_at=_ago(minutes=1),
         )
         session.add_all([wf_publish, wf_lead, wf_auto, wf_sentiment, wf_neighbor])
         session.commit()
@@ -451,16 +568,15 @@ def _seed_workflows(session: Session) -> None:
     if session.execute(select(WorkflowRun).limit(1)).scalar():
         print("[seed] workflow_runs already seeded, skip")
     else:
-        now = datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)
         runs = [
-            WorkflowRun(id="R-241015-01", workflow_id="WF-PUBLISH-NOTICE", started_at=now.replace(minute=0), ended_at=now.replace(minute=2), status="success", output_summary="检测到 2 条政策变更，已发布对应公告"),
-            WorkflowRun(id="R-241015-02", workflow_id="WF-PUBLISH-NOTICE", started_at=now.replace(minute=30), ended_at=now.replace(minute=32), status="success", output_summary="无新增政策变更"),
-            WorkflowRun(id="R-241014-03", workflow_id="WF-LEAD-REPLY", started_at=now.replace(hour=15, minute=30), ended_at=now.replace(hour=15, minute=32), status="success", output_summary="为「智慧城市项目」生成跟进邮件，客户已回复"),
-            WorkflowRun(id="R-241015-04", workflow_id="WF-LEAD-REPLY", started_at=now.replace(minute=0), status="running", output_summary="正在为「数字政务平台」生成方案草稿"),
-            WorkflowRun(id="R-241015-05", workflow_id="WF-AUTO-REPLY", started_at=now.replace(hour=14, minute=30), ended_at=now.replace(hour=14, minute=32), status="success", output_summary="处理 17 条新增反馈，归并为 9 个待办"),
-            WorkflowRun(id="R-241015-06", workflow_id="WF-AUTO-REPLY", started_at=now.replace(hour=17, minute=0), ended_at=now.replace(hour=17, minute=2), status="success", output_summary="处理 3 条紧急反馈，已创建工单"),
-            WorkflowRun(id="R-241015-07", workflow_id="WF-SENTIMENT-ALERT", started_at=now.replace(hour=13, minute=30), ended_at=now.replace(hour=13, minute=32), status="success", output_summary="情感值正常，无异常舆情"),
-            WorkflowRun(id="R-241015-08", workflow_id="WF-SENTIMENT-ALERT", started_at=now.replace(hour=17, minute=45), ended_at=now.replace(hour=17, minute=47), status="failed", output_summary="情感分析节点超时", error_message="模型推理节点 model-infer-01 负载过高，推理超时"),
+WorkflowRun(id="R-241015-01", workflow_id="WF-PUBLISH-NOTICE", started_at=_ago(minutes=120), ended_at=_ago(minutes=118), status="success", output_summary="检测到 2 条政策变更，已发布对应公告"),
+            WorkflowRun(id="R-241015-02", workflow_id="WF-PUBLISH-NOTICE", started_at=_ago(minutes=60), ended_at=_ago(minutes=58), status="success", output_summary="无新增政策变更"),
+            WorkflowRun(id="R-241014-03", workflow_id="WF-LEAD-REPLY", started_at=_ago(minutes=180), ended_at=_ago(minutes=178), status="success", output_summary="为「智慧城市项目」生成跟进邮件，客户已回复"),
+            WorkflowRun(id="R-241015-04", workflow_id="WF-LEAD-REPLY", started_at=_ago(minutes=30), status="running", output_summary="正在为「数字政务平台」生成方案草稿"),
+            WorkflowRun(id="R-241015-05", workflow_id="WF-AUTO-REPLY", started_at=_ago(minutes=240), ended_at=_ago(minutes=238), status="success", output_summary="处理 17 条新增反馈，归并为 9 个待办"),
+            WorkflowRun(id="R-241015-06", workflow_id="WF-AUTO-REPLY", started_at=_ago(minutes=90), ended_at=_ago(minutes=88), status="success", output_summary="处理 3 条紧急反馈，已创建工单"),
+            WorkflowRun(id="R-241015-07", workflow_id="WF-SENTIMENT-ALERT", started_at=_ago(minutes=300), ended_at=_ago(minutes=298), status="success", output_summary="情感值正常，无异常舆情"),
+            WorkflowRun(id="R-241015-08", workflow_id="WF-SENTIMENT-ALERT", started_at=_ago(minutes=45), ended_at=_ago(minutes=43), status="failed", output_summary="情感分析节点超时", error_message="模型推理节点 model-infer-01 负载过高，推理超时"),
         ]
         session.add_all(runs)
         session.commit()
@@ -472,10 +588,10 @@ def _seed_roadmap(session: Session) -> None:
         print("[seed] roadmap_items already seeded, skip")
     else:
         items = [
-            RoadmapItem(id="R2001", title="材料复用与一网通办改造", topic_id="t1", status="in_progress", version="v1.2", owner="数据治理组", due_date=datetime(2026, 11, 15, 0, 0, 0, tzinfo=timezone.utc), progress=45, task_count=4, created_at=datetime(2026, 9, 20, 8, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            RoadmapItem(id="R2002", title="大厅动态开窗与排队提示", topic_id="t2", status="planning", version="v1.3", owner="运营管理组", due_date=datetime(2026, 12, 1, 0, 0, 0, tzinfo=timezone.utc), progress=0, task_count=2, created_at=datetime(2026, 10, 1, 8, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            RoadmapItem(id="R2003", title="预约系统容灾与消息补发", topic_id="t3", status="scheduled", version="v1.1", owner="平台研发组", due_date=datetime(2026, 10, 25, 0, 0, 0, tzinfo=timezone.utc), progress=20, task_count=3, created_at=datetime(2026, 10, 5, 8, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
-            RoadmapItem(id="R2004", title="政策知识库问答上线", topic_id="t4", status="released", version="v1.0", owner="政务内容组", due_date=datetime(2026, 9, 30, 0, 0, 0, tzinfo=timezone.utc), progress=100, task_count=3, created_at=datetime(2026, 8, 15, 8, 0, 0, tzinfo=timezone.utc), updated_at=datetime(2026, 10, 14, 0, 0, 0, tzinfo=timezone.utc)),
+            RoadmapItem(id="R2001", title="材料复用与一网通办改造", topic_id="t1", status="in_progress", version="v1.2", owner="数据治理组", due_date=_now() + timedelta(days=28), progress=45, task_count=4, created_at=_ago(days=28), updated_at=_ago(hours=3)),
+            RoadmapItem(id="R2002", title="大厅动态开窗与排队提示", topic_id="t2", status="planning", version="v1.3", owner="运营管理组", due_date=_now() + timedelta(days=44), progress=0, task_count=2, created_at=_ago(days=17), updated_at=_ago(hours=3)),
+            RoadmapItem(id="R2003", title="预约系统容灾与消息补发", topic_id="t3", status="scheduled", version="v1.1", owner="平台研发组", due_date=_now() + timedelta(days=7), progress=20, task_count=3, created_at=_ago(days=13), updated_at=_ago(hours=3)),
+            RoadmapItem(id="R2004", title="政策知识库问答上线", topic_id="t4", status="released", version="v1.0", owner="政务内容组", due_date=_ago(days=18), progress=100, task_count=3, created_at=_ago(days=64), updated_at=_ago(hours=3)),
         ]
         session.add_all(items)
         session.commit()
@@ -485,18 +601,18 @@ def _seed_roadmap(session: Session) -> None:
         print("[seed] task_items already seeded, skip")
     else:
         tasks = [
-            TaskItem(id="TK1001", roadmap_id="R2001", title="材料目录对齐（13 个高频事项）", status="done", owner="数据治理组", priority=1, created_at=datetime(2026, 9, 22, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1002", roadmap_id="R2001", title="电子材料库接口联调", status="doing", owner="平台研发组", priority=1, created_at=datetime(2026, 9, 28, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1003", roadmap_id="R2001", title="窗口免提交规则试点", status="doing", owner="运营管理组", priority=2, created_at=datetime(2026, 10, 6, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1004", roadmap_id="R2001", title="线上清单与线下口径统一", status="todo", owner="政务内容组", priority=2, created_at=datetime(2026, 10, 10, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1005", roadmap_id="R2002", title="高峰时段取号数据分析", status="todo", owner="运营管理组", priority=1, created_at=datetime(2026, 10, 8, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1006", roadmap_id="R2002", title="动态开窗规则评审", status="todo", owner="运营管理组", priority=3, created_at=datetime(2026, 10, 11, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1007", roadmap_id="R2003", title="预约数据每日快照备份", status="doing", owner="平台研发组", priority=1, created_at=datetime(2026, 10, 9, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1008", roadmap_id="R2003", title="短信提醒补偿任务", status="todo", owner="平台研发组", priority=2, created_at=datetime(2026, 10, 12, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1009", roadmap_id="R2003", title="改签幂等与重试修复", status="todo", owner="平台研发组", priority=1, created_at=datetime(2026, 10, 13, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1010", roadmap_id="R2004", title="政策问答语料整理", status="done", owner="政务内容组", priority=1, created_at=datetime(2026, 8, 20, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1011", roadmap_id="R2004", title="问答系统评测通过", status="done", owner="平台研发组", priority=2, created_at=datetime(2026, 9, 10, 8, 0, 0, tzinfo=timezone.utc)),
-            TaskItem(id="TK1012", roadmap_id="R2004", title="对外发布与值班培训", status="done", owner="运营管理组", priority=3, created_at=datetime(2026, 9, 25, 8, 0, 0, tzinfo=timezone.utc)),
+            TaskItem(id="TK1001", roadmap_id="R2001", title="材料目录对齐（13 个高频事项）", status="done", owner="数据治理组", priority=1, created_at=_ago(days=26)),
+            TaskItem(id="TK1002", roadmap_id="R2001", title="电子材料库接口联调", status="doing", owner="平台研发组", priority=1, created_at=_ago(days=20)),
+            TaskItem(id="TK1003", roadmap_id="R2001", title="窗口免提交规则试点", status="doing", owner="运营管理组", priority=2, created_at=_ago(days=12)),
+            TaskItem(id="TK1004", roadmap_id="R2001", title="线上清单与线下口径统一", status="todo", owner="政务内容组", priority=2, created_at=_ago(days=8)),
+            TaskItem(id="TK1005", roadmap_id="R2002", title="高峰时段取号数据分析", status="todo", owner="运营管理组", priority=1, created_at=_ago(days=10)),
+            TaskItem(id="TK1006", roadmap_id="R2002", title="动态开窗规则评审", status="todo", owner="运营管理组", priority=3, created_at=_ago(days=7)),
+            TaskItem(id="TK1007", roadmap_id="R2003", title="预约数据每日快照备份", status="doing", owner="平台研发组", priority=1, created_at=_ago(days=9)),
+            TaskItem(id="TK1008", roadmap_id="R2003", title="短信提醒补偿任务", status="todo", owner="平台研发组", priority=2, created_at=_ago(days=6)),
+            TaskItem(id="TK1009", roadmap_id="R2003", title="改签幂等与重试修复", status="todo", owner="平台研发组", priority=1, created_at=_ago(days=5)),
+            TaskItem(id="TK1010", roadmap_id="R2004", title="政策问答语料整理", status="done", owner="政务内容组", priority=1, created_at=_ago(days=59)),
+            TaskItem(id="TK1011", roadmap_id="R2004", title="问答系统评测通过", status="done", owner="平台研发组", priority=2, created_at=_ago(days=38)),
+            TaskItem(id="TK1012", roadmap_id="R2004", title="对外发布与值班培训", status="done", owner="运营管理组", priority=3, created_at=_ago(days=23)),
         ]
         session.add_all(tasks)
         session.commit()
@@ -506,9 +622,9 @@ def _seed_roadmap(session: Session) -> None:
         print("[seed] reply_drafts already seeded, skip")
     else:
         drafts = [
-            ReplyDraft(id="D3001", feedback_id=str(_uuid("feedback-F1055")), excerpt="今天大厅叫号系统故障，工作人员手工登记排队，秩序混乱，等了近一小时。", draft="您好，抱歉给您带来不便。今日上午叫号系统临时故障已修复，我们对排队秩序问题已启动复盘，后续将增加故障应急广播与手工叫号预案，感谢您的反馈。", tone="致歉+整改承诺", status="draft", updated_at=datetime(2026, 10, 14, 10, 20, 0, tzinfo=timezone.utc)),
-            ReplyDraft(id="D3002", feedback_id=str(_uuid("feedback-F1049")), excerpt="线上预约系统凌晨维护后数据回滚，白天的预约记录全部丢失，窗口不认补打的凭证。", draft="您好，关于预约记录回滚问题我们正在核查数据链路，已为您恢复预约记录并短信通知，窗口将按恢复后的记录办理，给您造成不便非常抱歉。", tone="致歉+处理进展", status="draft", updated_at=datetime(2026, 10, 13, 11, 5, 0, tzinfo=timezone.utc)),
-            ReplyDraft(id="D3003", feedback_id=str(_uuid("feedback-F1053")), excerpt="昨日门户政策问答回复已读未回，今天热线又问了一遍，答复内容还不一致。", draft="您好，您反映的政策问答未回复与口径不一致问题已转政务内容组，将在 1 个工作日内统一口径并书面回复，感谢监督。", tone="说明+时限承诺", status="approved", updated_at=datetime(2026, 10, 14, 9, 40, 0, tzinfo=timezone.utc)),
+            ReplyDraft(id="D3001", feedback_id=str(_uuid("feedback-F1055")), excerpt="今天大厅叫号系统故障，工作人员手工登记排队，秩序混乱，等了近一小时。", draft="您好，抱歉给您带来不便。今日上午叫号系统临时故障已修复，我们对排队秩序问题已启动复盘，后续将增加故障应急广播与手工叫号预案，感谢您的反馈。", tone="致歉+整改承诺", status="draft", updated_at=_ago(hours=4)),
+            ReplyDraft(id="D3002", feedback_id=str(_uuid("feedback-F1049")), excerpt="线上预约系统凌晨维护后数据回滚，白天的预约记录全部丢失，窗口不认补打的凭证。", draft="您好，关于预约记录回滚问题我们正在核查数据链路，已为您恢复预约记录并短信通知，窗口将按恢复后的记录办理，给您造成不便非常抱歉。", tone="致歉+处理进展", status="draft", updated_at=_ago(days=1, hours=3)),
+            ReplyDraft(id="D3003", feedback_id=str(_uuid("feedback-F1053")), excerpt="昨日门户政策问答回复已读未回，今天热线又问了一遍，答复内容还不一致。", draft="您好，您反映的政策问答未回复与口径不一致问题已转政务内容组，将在 1 个工作日内统一口径并书面回复，感谢监督。", tone="说明+时限承诺", status="approved", updated_at=_ago(hours=5)),
         ]
         session.add_all(drafts)
         session.commit()
@@ -520,10 +636,10 @@ def _seed_resources(session: Session) -> None:
         print("[seed] server_states already seeded, skip")
     else:
         servers = [
-            ServerState(id="SRV-01", name="api-gateway-01", role="API 网关", cpu=42.0, mem=55.0, disk=46.0, load="0.8, 0.6, 0.5", uptime="32 天", status="healthy", updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ServerState(id="SRV-02", name="app-worker-01", role="应用服务", cpu=68.0, mem=61.0, disk=52.0, load="1.6, 1.3, 1.1", uptime="18 天", status="healthy", updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ServerState(id="SRV-03", name="scheduler-01", role="任务调度", cpu=35.0, mem=44.0, disk=58.0, load="0.4, 0.5, 0.4", uptime="45 天", status="healthy", updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ServerState(id="SRV-04", name="model-infer-01", role="模型推理", cpu=82.0, mem=74.0, disk=63.0, load="3.4, 2.9, 2.6", uptime="12 天", status="warning", updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
+            ServerState(id="SRV-01", name="api-gateway-01", role="API 网关", cpu=42.0, mem=55.0, disk=46.0, load="0.8, 0.6, 0.5", uptime="32 天", status="healthy", updated_at=_ago(minutes=2)),
+            ServerState(id="SRV-02", name="app-worker-01", role="应用服务", cpu=68.0, mem=61.0, disk=52.0, load="1.6, 1.3, 1.1", uptime="18 天", status="healthy", updated_at=_ago(minutes=2)),
+            ServerState(id="SRV-03", name="scheduler-01", role="任务调度", cpu=35.0, mem=44.0, disk=58.0, load="0.4, 0.5, 0.4", uptime="45 天", status="healthy", updated_at=_ago(minutes=2)),
+            ServerState(id="SRV-04", name="model-infer-01", role="模型推理", cpu=82.0, mem=74.0, disk=63.0, load="3.4, 2.9, 2.6", uptime="12 天", status="warning", updated_at=_ago(minutes=2)),
         ]
         session.add_all(servers)
         session.commit()
@@ -533,9 +649,9 @@ def _seed_resources(session: Session) -> None:
         print("[seed] database_states already seeded, skip")
     else:
         dbs = [
-            DatabaseState(id="DB-01", name="postgres-main", engine="PostgreSQL 16 (pgvector)", status="healthy", connections=23, max_connections=100, slow_queries=2, tablespace_pct=38.0, last_check=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            DatabaseState(id="DB-02", name="redis-cache", engine="Redis 7", status="healthy", connections=8, max_connections=64, slow_queries=0, tablespace_pct=12.0, last_check=datetime(2026, 10, 14, 18, 29, 0, tzinfo=timezone.utc)),
-            DatabaseState(id="DB-03", name="milvus-vector", engine="Milvus 2.4", status="degraded", connections=5, max_connections=32, slow_queries=7, tablespace_pct=71.0, last_check=datetime(2026, 10, 14, 18, 26, 0, tzinfo=timezone.utc)),
+            DatabaseState(id="DB-01", name="postgres-main", engine="PostgreSQL 16 (pgvector)", status="healthy", connections=23, max_connections=100, slow_queries=2, tablespace_pct=38.0, last_check=_ago(minutes=2)),
+            DatabaseState(id="DB-02", name="redis-cache", engine="Redis 7", status="healthy", connections=8, max_connections=64, slow_queries=0, tablespace_pct=12.0, last_check=_ago(minutes=1)),
+            DatabaseState(id="DB-03", name="milvus-vector", engine="Milvus 2.4", status="degraded", connections=5, max_connections=32, slow_queries=7, tablespace_pct=71.0, last_check=_ago(minutes=4)),
         ]
         session.add_all(dbs)
         session.commit()
@@ -545,20 +661,20 @@ def _seed_resources(session: Session) -> None:
         print("[seed] api_endpoint_states already seeded, skip")
     else:
         apis = [
-            ApiEndpointState(id="API-01", method="GET", path="/api/v1/healthz", status="healthy", response_ms=23, error_rate=0.0, rps=12.4, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-02", method="GET", path="/api/v1/feedbacks", status="healthy", response_ms=41, error_rate=0.2, rps=8.1, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-03", method="GET", path="/api/v1/insights/topics", status="healthy", response_ms=56, error_rate=0.4, rps=3.2, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-04", method="POST", path="/api/v1/ai/classify", status="healthy", response_ms=320, error_rate=1.1, rps=2.7, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-05", method="POST", path="/api/v1/ai/reply/generate", status="healthy", response_ms=480, error_rate=1.8, rps=1.9, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-06", method="GET", path="/api/v1/gov/summary", status="degraded", response_ms=612, error_rate=3.4, rps=1.2, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-07", method="GET", path="/api/v1/business/leads", status="healthy", response_ms=63, error_rate=0.3, rps=1.5, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-08", method="POST", path="/api/v1/workflows/run", status="healthy", response_ms=240, error_rate=0.9, rps=0.8, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-09", method="GET", path="/api/v1/resources/health", status="healthy", response_ms=35, error_rate=0.0, rps=2.3, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-10", method="GET", path="/api/v1/resources/logs", status="healthy", response_ms=52, error_rate=0.1, rps=1.7, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-11", method="GET", path="/api/v1/interviews", status="healthy", response_ms=47, error_rate=0.2, rps=1.1, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-12", method="GET", path="/api/v1/agents", status="healthy", response_ms=39, error_rate=0.0, rps=1.4, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-13", method="POST", path="/api/v1/notices/publish", status="degraded", response_ms=880, error_rate=4.6, rps=0.2, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
-            ApiEndpointState(id="API-14", method="GET", path="/api/v1/report/export", status="down", response_ms=0, error_rate=100.0, rps=0.0, updated_at=datetime(2026, 10, 14, 18, 28, 0, tzinfo=timezone.utc)),
+            ApiEndpointState(id="API-01", method="GET", path="/api/v1/healthz", status="healthy", response_ms=23, error_rate=0.0, rps=12.4, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-02", method="GET", path="/api/v1/feedbacks", status="healthy", response_ms=41, error_rate=0.2, rps=8.1, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-03", method="GET", path="/api/v1/insights/topics", status="healthy", response_ms=56, error_rate=0.4, rps=3.2, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-04", method="POST", path="/api/v1/ai/classify", status="healthy", response_ms=320, error_rate=1.1, rps=2.7, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-05", method="POST", path="/api/v1/ai/reply/generate", status="healthy", response_ms=480, error_rate=1.8, rps=1.9, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-06", method="GET", path="/api/v1/gov/summary", status="degraded", response_ms=612, error_rate=3.4, rps=1.2, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-07", method="GET", path="/api/v1/business/leads", status="healthy", response_ms=63, error_rate=0.3, rps=1.5, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-08", method="POST", path="/api/v1/workflows/run", status="healthy", response_ms=240, error_rate=0.9, rps=0.8, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-09", method="GET", path="/api/v1/resources/health", status="healthy", response_ms=35, error_rate=0.0, rps=2.3, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-10", method="GET", path="/api/v1/resources/logs", status="healthy", response_ms=52, error_rate=0.1, rps=1.7, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-11", method="GET", path="/api/v1/interviews", status="healthy", response_ms=47, error_rate=0.2, rps=1.1, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-12", method="GET", path="/api/v1/agents", status="healthy", response_ms=39, error_rate=0.0, rps=1.4, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-13", method="POST", path="/api/v1/notices/publish", status="degraded", response_ms=880, error_rate=4.6, rps=0.2, updated_at=_ago(minutes=2)),
+            ApiEndpointState(id="API-14", method="GET", path="/api/v1/report/export", status="down", response_ms=0, error_rate=100.0, rps=0.0, updated_at=_ago(minutes=2)),
         ]
         session.add_all(apis)
         session.commit()
@@ -567,18 +683,17 @@ def _seed_resources(session: Session) -> None:
     if session.execute(select(SystemLogEntry).limit(1)).scalar():
         print("[seed] system_log_entries already seeded, skip")
     else:
-        now = datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)
         logs = [
-            SystemLogEntry(id="LG-001", time=now.replace(minute=29), level="warn", module="milvus-vector", message="向量检索延迟上升：P95 从 120ms 升至 320ms，建议检查索引重建任务"),
-            SystemLogEntry(id="LG-002", time=now.replace(minute=27), level="error", module="report-service", message="导出任务 EXP-2045 失败：PDF 渲染进程内存溢出，已自动重试 2 次"),
-            SystemLogEntry(id="LG-003", time=now.replace(minute=24), level="info", module="scheduler-01", message="工作流 WF-SENTIMENT-ALERT 定时触发完成，共处理 12 条新增舆情"),
-            SystemLogEntry(id="LG-004", time=now.replace(minute=21), level="info", module="app-worker-01", message="Agent AG-002 完成商单回复草稿 3 份，进入人工审批队列"),
-            SystemLogEntry(id="LG-005", time=now.replace(minute=16), level="info", module="api-gateway-01", message="接口 /api/v1/gov/summary 响应时间超过 600ms，已记录慢请求采样"),
-            SystemLogEntry(id="LG-006", time=now.replace(minute=10), level="info", module="scheduler-01", message="数据同步任务 SYNC-042 完成：反馈库新增 10 条，去重合并 3 组"),
-            SystemLogEntry(id="LG-007", time=now.replace(minute=4), level="warn", module="model-infer-01", message="推理节点 GPU 显存使用率 88%，未来 1 小时有批量聚类任务，存在排队风险"),
-            SystemLogEntry(id="LG-008", time=now.replace(hour=17, minute=54), level="info", module="postgres-main", message="慢查询收敛：近 1 小时慢 SQL 2 条，均为含向量检索的大范围筛选"),
-            SystemLogEntry(id="LG-009", time=now.replace(hour=17, minute=42), level="error", module="report-service", message="导出任务 EXP-2039 重试超过上限，已转人工处理，工单编号 TK-1180"),
-            SystemLogEntry(id="LG-010", time=now.replace(hour=17, minute=30), level="info", module="app-worker-01", message="Agent AG-001 完成政策公告草稿《智能客服平台升级通知》，等待发布审批"),
+            SystemLogEntry(id="LG-001", time=_ago(minutes=1), level="warn", module="milvus-vector", message="向量检索延迟上升：P95 从 120ms 升至 320ms，建议检查索引重建任务"),
+            SystemLogEntry(id="LG-002", time=_ago(minutes=3), level="error", module="report-service", message="导出任务 EXP-2045 失败：PDF 渲染进程内存溢出，已自动重试 2 次"),
+            SystemLogEntry(id="LG-003", time=_ago(minutes=6), level="info", module="scheduler-01", message="工作流 WF-SENTIMENT-ALERT 定时触发完成，共处理 12 条新增舆情"),
+            SystemLogEntry(id="LG-004", time=_ago(minutes=9), level="info", module="app-worker-01", message="Agent AG-002 完成商单回复草稿 3 份，进入人工审批队列"),
+            SystemLogEntry(id="LG-005", time=_ago(minutes=14), level="info", module="api-gateway-01", message="接口 /api/v1/gov/summary 响应时间超过 600ms，已记录慢请求采样"),
+            SystemLogEntry(id="LG-006", time=_ago(minutes=20), level="info", module="scheduler-01", message="数据同步任务 SYNC-042 完成：反馈库新增 10 条，去重合并 3 组"),
+            SystemLogEntry(id="LG-007", time=_ago(minutes=26), level="warn", module="model-infer-01", message="推理节点 GPU 显存使用率 88%，未来 1 小时有批量聚类任务，存在排队风险"),
+            SystemLogEntry(id="LG-008", time=_ago(minutes=36), level="info", module="postgres-main", message="慢查询收敛：近 1 小时慢 SQL 2 条，均为含向量检索的大范围筛选"),
+            SystemLogEntry(id="LG-009", time=_ago(minutes=48), level="error", module="report-service", message="导出任务 EXP-2039 重试超过上限，已转人工处理，工单编号 TK-1180"),
+            SystemLogEntry(id="LG-010", time=_ago(minutes=60), level="info", module="app-worker-01", message="Agent AG-001 完成政策公告草稿《智能客服平台升级通知》，等待发布审批"),
         ]
         session.add_all(logs)
         session.commit()
@@ -587,12 +702,11 @@ def _seed_resources(session: Session) -> None:
     if session.execute(select(ResourceAlert).limit(1)).scalar():
         print("[seed] resource_alerts already seeded, skip")
     else:
-        now = datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)
         alerts = [
-            ResourceAlert(id="AL-001", level="error", title="导出服务连续失败", time=now.replace(minute=27), target="report-service / EXP-2045"),
-            ResourceAlert(id="AL-002", level="warn", title="模型推理节点负载过高", time=now.replace(minute=4), target="model-infer-01"),
-            ResourceAlert(id="AL-003", level="warn", title="向量库检索延迟上升", time=now.replace(minute=29), target="milvus-vector"),
-            ResourceAlert(id="AL-004", level="info", title="政策公告草稿待审批", time=now.replace(hour=17, minute=30), target="Agent AG-001"),
+            ResourceAlert(id="AL-001", level="error", title="导出服务连续失败", time=_ago(minutes=3), target="report-service / EXP-2045"),
+            ResourceAlert(id="AL-002", level="warn", title="模型推理节点负载过高", time=_ago(minutes=26), target="model-infer-01"),
+            ResourceAlert(id="AL-003", level="warn", title="向量库检索延迟上升", time=_ago(minutes=1), target="milvus-vector"),
+            ResourceAlert(id="AL-004", level="info", title="政策公告草稿待审批", time=_ago(minutes=60), target="Agent AG-001"),
         ]
         session.add_all(alerts)
         session.commit()
@@ -604,12 +718,12 @@ def _seed_settings(session: Session) -> None:
         print("[seed] channel_configs already seeded, skip")
     else:
         channels = [
-            ChannelConfig(id="CC-001", key="ticket", label="工单系统", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc), incoming=12, note="工单系统已对接", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-002", key="portal", label="门户留言", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc), incoming=9, note="门户留言已对接", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-003", key="review", label="评价中心", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 20, 0, tzinfo=timezone.utc), incoming=7, note="评价中心已对接", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-004", key="hotline", label="热线录音", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 15, 0, tzinfo=timezone.utc), incoming=11, note="热线录音转写待接 LLM", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-005", key="interview", label="客户访谈", enabled=True, connected=False, last_sync=None, incoming=0, note="访谈为线下导入，未接自动同步", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-            ChannelConfig(id="CC-006", key="sales", label="商务反馈", enabled=True, connected=True, last_sync=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc), incoming=5, note="商务侧反馈已接入，线索同步正常", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
+            ChannelConfig(id="CC-001", key="ticket", label="工单系统", enabled=True, connected=True, last_sync=_ago(minutes=0), incoming=12, note="工单系统已对接", updated_at=_ago(minutes=0)),
+            ChannelConfig(id="CC-002", key="portal", label="门户留言", enabled=True, connected=True, last_sync=_ago(minutes=0), incoming=9, note="门户留言已对接", updated_at=_ago(minutes=0)),
+            ChannelConfig(id="CC-003", key="review", label="评价中心", enabled=True, connected=True, last_sync=_ago(minutes=10), incoming=7, note="评价中心已对接", updated_at=_ago(minutes=0)),
+            ChannelConfig(id="CC-004", key="hotline", label="热线录音", enabled=True, connected=True, last_sync=_ago(minutes=15), incoming=11, note="热线录音转写待接 LLM", updated_at=_ago(minutes=0)),
+            ChannelConfig(id="CC-005", key="interview", label="客户访谈", enabled=True, connected=False, last_sync=None, incoming=0, note="访谈为线下导入，未接自动同步", updated_at=_ago(minutes=0)),
+            ChannelConfig(id="CC-006", key="sales", label="商务反馈", enabled=True, connected=True, last_sync=_ago(minutes=0), incoming=5, note="商务侧反馈已接入，线索同步正常", updated_at=_ago(minutes=0)),
         ]
         session.add_all(channels)
         session.commit()
@@ -621,10 +735,10 @@ def _seed_automation(session: Session) -> None:
         print("[seed] automation_rules already seeded, skip")
         return
     rules = [
-        AutomationRule(id="rule-001", name="自动分类新工单", description="根据内容关键词与历史聚类模型，自动为新提交工单分配主题标签与优先级", enabled=True, scenario="工单接入", icon="tags", tone="primary", stats="今日已自动分类 12 条", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-        AutomationRule(id="rule-002", name="重复问题自动回复", description="对匹配到知识库高频问答模板的工单，自动生成统一规范回复并进入待审批队列", enabled=True, scenario="回复生成", icon="message", tone="success", stats="今日已命中 5 条", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-        AutomationRule(id="rule-003", name="高优先级自动升级", description="P4+ 工单或情感极负面反馈，自动推送至值班负责人并生成督办任务", enabled=True, scenario="风险预警", icon="alert", tone="warning", stats="今日已升级 2 条", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
-        AutomationRule(id="rule-004", name="情感负面实时预警", description="监测热线/门户/评价渠道，连续出现负面情感反馈时触发预警通知", enabled=True, scenario="舆情监测", icon="bell", tone="danger", stats="今日已触发 1 次", updated_at=datetime(2026, 10, 14, 18, 30, 0, tzinfo=timezone.utc)),
+        AutomationRule(id="rule-001", name="自动分类新工单", description="根据内容关键词与历史聚类模型，自动为新提交工单分配主题标签与优先级", enabled=True, scenario="工单接入", icon="tags", tone="primary", stats="今日已自动分类 12 条", updated_at=_ago(minutes=0)),
+        AutomationRule(id="rule-002", name="重复问题自动回复", description="对匹配到知识库高频问答模板的工单，自动生成统一规范回复并进入待审批队列", enabled=True, scenario="回复生成", icon="message", tone="success", stats="今日已命中 5 条", updated_at=_ago(minutes=0)),
+        AutomationRule(id="rule-003", name="高优先级自动升级", description="P4+ 工单或情感极负面反馈，自动推送至值班负责人并生成督办任务", enabled=True, scenario="风险预警", icon="alert", tone="warning", stats="今日已升级 2 条", updated_at=_ago(minutes=0)),
+        AutomationRule(id="rule-004", name="情感负面实时预警", description="监测热线/门户/评价渠道，连续出现负面情感反馈时触发预警通知", enabled=True, scenario="舆情监测", icon="bell", tone="danger", stats="今日已触发 1 次", updated_at=_ago(minutes=0)),
     ]
     session.add_all(rules)
     session.commit()
@@ -635,10 +749,10 @@ def _seed_business(session: Session) -> None:
     # BusinessLead
     if not session.execute(select(BusinessLead).limit(1)).scalar():
         leads = [
-            BusinessLead(id="BL-001", feedback_id="F1101", content="我们公司有 400 多名设计师，现在每人单独建账号太麻烦，希望支持批量导入和角色分组。", company_name="云帆数字设计", industry="企业服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·批量账号管理", match_reason="反馈提及「批量导入 + 角色分组」，与企业版多人协作能力语义匹配", value_score=82, confidence=91, stage="pushed", created_at=datetime(2026, 10, 15, 16, 0, 0, tzinfo=timezone.utc)),
-            BusinessLead(id="BL-002", feedback_id="F1102", content="作为外包承接方，客户要求我们提供本地化部署版本，敏感数据不能出我们的机房。", company_name="中科软联", industry="软件外包", company_type="私企", size_band="200-500 人", matched_product="私有化部署包", match_reason="反馈提出「本地化部署 + 数据不出域」，匹配私有化版本需求", value_score=78, confidence=88, stage="qualified", created_at=datetime(2026, 10, 14, 16, 0, 0, tzinfo=timezone.utc)),
-            BusinessLead(id="BL-003", feedback_id="F1103", content="我们是省属国企，需要和内部 OA、统一认证对接，账号体系要对齐集团标准。", company_name="华东能源集团", industry="能源化工", company_type="国企", size_band="2000 人以上", matched_product="企业版·SSO/统一认证", match_reason="反馈提及「统一认证 + 集团账号标准」，匹配 SSO 集成能力", value_score=90, confidence=95, stage="pushed", created_at=datetime(2026, 10, 13, 16, 0, 0, tzinfo=timezone.utc)),
-            BusinessLead(id="BL-004", feedback_id="F1104", content="当前产品缺少审计日志导出，合规团队要求完整操作留痕，否则无法过等保三级。", company_name="数智科技", industry="数据服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·审计日志与合规报表", match_reason="反馈提出「审计日志 + 等保合规」刚需，匹配企业版审计能力", value_score=85, confidence=92, stage="identified", created_at=datetime(2026, 10, 12, 16, 0, 0, tzinfo=timezone.utc)),
+            BusinessLead(id="BL-001", feedback_id="F1101", content="我们公司有 400 多名设计师，现在每人单独建账号太麻烦，希望支持批量导入和角色分组。", company_name="云帆数字设计", industry="企业服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·批量账号管理", match_reason="反馈提及「批量导入 + 角色分组」，与企业版多人协作能力语义匹配", value_score=82, confidence=91, stage="pushed", created_at=_ago(days=0, hours=8)),
+            BusinessLead(id="BL-002", feedback_id="F1102", content="作为外包承接方，客户要求我们提供本地化部署版本，敏感数据不能出我们的机房。", company_name="中科软联", industry="软件外包", company_type="私企", size_band="200-500 人", matched_product="私有化部署包", match_reason="反馈提出「本地化部署 + 数据不出域」，匹配私有化版本需求", value_score=78, confidence=88, stage="qualified", created_at=_ago(days=1, hours=2)),
+            BusinessLead(id="BL-003", feedback_id="F1103", content="我们是省属国企，需要和内部 OA、统一认证对接，账号体系要对齐集团标准。", company_name="华东能源集团", industry="能源化工", company_type="国企", size_band="2000 人以上", matched_product="企业版·SSO/统一认证", match_reason="反馈提及「统一认证 + 集团账号标准」，匹配 SSO 集成能力", value_score=90, confidence=95, stage="pushed", created_at=_ago(days=1, hours=20)),
+            BusinessLead(id="BL-004", feedback_id="F1104", content="当前产品缺少审计日志导出，合规团队要求完整操作留痕，否则无法过等保三级。", company_name="数智科技", industry="数据服务", company_type="私企", size_band="500-2000 人", matched_product="企业版·审计日志与合规报表", match_reason="反馈提出「审计日志 + 等保合规」刚需，匹配企业版审计能力", value_score=85, confidence=92, stage="identified", created_at=_ago(days=2, hours=10)),
         ]
         session.add_all(leads)
         session.commit()
@@ -649,9 +763,9 @@ def _seed_business(session: Session) -> None:
     # MarketSignal
     if not session.execute(select(MarketSignal).limit(1)).scalar():
         signals = [
-            MarketSignal(id="MS-001", title="大型客户批量账号管理需求集中爆发", type="opportunity", summary="近期连续收到 4 条中大型企业反馈，均提到「批量导入成员 + 角色分组授权」诉求，说明该需求正从头部客户向腰部蔓延。", evidence_count=4, severity=3, related_industries=["企业服务", "教育", "智能制造"], created_at=datetime(2026, 10, 15, 10, 0, 0, tzinfo=timezone.utc)),
-            MarketSignal(id="MS-002", title="数据不出域成为政企客户准入硬门槛", type="risk", summary="连续 3 家客户明确要求私有化部署，若不能提供本地化方案，可能直接失去政企赛道。", evidence_count=3, severity=4, related_industries=["能源化工", "智能制造", "政务"], created_at=datetime(2026, 10, 14, 10, 0, 0, tzinfo=timezone.utc)),
-            MarketSignal(id="MS-003", title="国企客户统一认证对接需求增加", type="opportunity", summary="Q3 以来已有 2 家国企提出 SSO/OAuth2 对接诉求，预计 Q4 会进一步增多，建议优先排期。", evidence_count=2, severity=2, related_industries=["能源化工", "金融"], created_at=datetime(2026, 10, 13, 10, 0, 0, tzinfo=timezone.utc)),
+            MarketSignal(id="MS-001", title="大型客户批量账号管理需求集中爆发", type="opportunity", summary="近期连续收到 4 条中大型企业反馈，均提到「批量导入成员 + 角色分组授权」诉求，说明该需求正从头部客户向腰部蔓延。", evidence_count=4, severity=3, related_industries=["企业服务", "教育", "智能制造"], created_at=_ago(days=0, hours=9)),
+            MarketSignal(id="MS-002", title="数据不出域成为政企客户准入硬门槛", type="risk", summary="连续 3 家客户明确要求私有化部署，若不能提供本地化方案，可能直接失去政企赛道。", evidence_count=3, severity=4, related_industries=["能源化工", "智能制造", "政务"], created_at=_ago(days=1, hours=5)),
+            MarketSignal(id="MS-003", title="国企客户统一认证对接需求增加", type="opportunity", summary="Q3 以来已有 2 家国企提出 SSO/OAuth2 对接诉求，预计 Q4 会进一步增多，建议优先排期。", evidence_count=2, severity=2, related_industries=["能源化工", "金融"], created_at=_ago(days=1, hours=22)),
         ]
         session.add_all(signals)
         session.commit()
@@ -662,10 +776,10 @@ def _seed_business(session: Session) -> None:
     # CommonNeed
     if not session.execute(select(CommonNeed).limit(1)).scalar():
         needs = [
-            CommonNeed(id="CN-001", title="批量账号与角色管理", description="大型组织需要批量导入成员、按部门/角色分组授权，减少单账号逐个配置的运维成本。", feedback_count=34, customer_count=12, industries=["企业服务", "能源化工", "教育"], product_potential="企业版·批量账号与 RBAC 角色分组", priority=5, status="planned", created_at=datetime(2026, 10, 15, 10, 0, 0, tzinfo=timezone.utc)),
-            CommonNeed(id="CN-002", title="私有化与数据不出域部署", description="具备合规诉求的政企客户要求本地化部署，数据不允许离开自有机房或堡垒环境。", feedback_count=29, customer_count=9, industries=["智能制造", "能源化工"], product_potential="私有化部署包（Docker/K8s + 本地模型）", priority=5, status="open", created_at=datetime(2026, 10, 14, 10, 0, 0, tzinfo=timezone.utc)),
-            CommonNeed(id="CN-003", title="统一认证与集团账号对接", description="国企与大型集团要求对接内部 OA、统一身份认证，账号体系需对齐集团标准。", feedback_count=18, customer_count=7, industries=["能源化工", "智能制造"], product_potential="企业版·SSO/标准协议联调", priority=4, status="planned", created_at=datetime(2026, 10, 13, 10, 0, 0, tzinfo=timezone.utc)),
-            CommonNeed(id="CN-004", title="审计日志与合规报告", description="受 GDPR / 等保等约束的客户需要完整操作审计、留痕与合规导出能力。", feedback_count=27, customer_count=8, industries=["智能制造", "能源化工", "数据服务"], product_potential="企业版·审计日志与合规报表", priority=4, status="open", created_at=datetime(2026, 10, 12, 10, 0, 0, tzinfo=timezone.utc)),
+            CommonNeed(id="CN-001", title="批量账号与角色管理", description="大型组织需要批量导入成员、按部门/角色分组授权，减少单账号逐个配置的运维成本。", feedback_count=34, customer_count=12, industries=["企业服务", "能源化工", "教育"], product_potential="企业版·批量账号与 RBAC 角色分组", priority=5, status="planned", created_at=_ago(days=0, hours=10)),
+            CommonNeed(id="CN-002", title="私有化与数据不出域部署", description="具备合规诉求的政企客户要求本地化部署，数据不允许离开自有机房或堡垒环境。", feedback_count=29, customer_count=9, industries=["智能制造", "能源化工"], product_potential="私有化部署包（Docker/K8s + 本地模型）", priority=5, status="open", created_at=_ago(days=1, hours=6)),
+            CommonNeed(id="CN-003", title="统一认证与集团账号对接", description="国企与大型集团要求对接内部 OA、统一身份认证，账号体系需对齐集团标准。", feedback_count=18, customer_count=7, industries=["能源化工", "智能制造"], product_potential="企业版·SSO/标准协议联调", priority=4, status="planned", created_at=_ago(days=1, hours=23)),
+            CommonNeed(id="CN-004", title="审计日志与合规报告", description="受 GDPR / 等保等约束的客户需要完整操作审计、留痕与合规导出能力。", feedback_count=27, customer_count=8, industries=["智能制造", "能源化工", "数据服务"], product_potential="企业版·审计日志与合规报表", priority=4, status="open", created_at=_ago(days=2, hours=7)),
         ]
         session.add_all(needs)
         session.commit()
@@ -674,9 +788,49 @@ def _seed_business(session: Session) -> None:
         print("[seed] common_needs already seeded, skip")
 
 
-def seed_all() -> None:
+_RESET_MODELS: list[type[Any]] = [
+    Feedback,
+    InsightTopic,
+    GovHotTopic,
+    GovAlertItem,
+    GovPolicyNotice,
+    InterviewRecord,
+    Agent,
+    AgentTool,
+    Skill,
+    Workflow,
+    WorkflowRun,
+    RoadmapItem,
+    TaskItem,
+    ReplyDraft,
+    ServerState,
+    DatabaseState,
+    ApiEndpointState,
+    SystemLogEntry,
+    ResourceAlert,
+    ChannelConfig,
+    Setting,
+    AutomationRule,
+    BusinessLead,
+    MarketSignal,
+    CommonNeed,
+]
+
+
+def seed_all(*, reset: bool = False) -> None:
+    """灌入演示数据（幂等）。
+
+    - reset=False（默认）：仅首次灌入，已存在的表数据保持不变（适合生产环境首次部署）。
+    - reset=True：先清空演示表再重新生成，使所有时间字段按“当前时间”相对生成，
+      保证种子数据始终落在最近时段（适合演示/联调环境刷新数据）。
+    """
     session = SessionLocal()
     try:
+        if reset:
+            for model in _RESET_MODELS:
+                session.execute(delete(model))
+            session.commit()
+            print("[seed] demo tables cleared")
         _seed_feedbacks(session)
         _seed_insight_topics(session)
         _seed_gov(session)
@@ -698,4 +852,5 @@ def seed_all() -> None:
 
 
 if __name__ == "__main__":
-    seed_all()
+    reset = "--reset" in sys.argv
+    seed_all(reset=reset)

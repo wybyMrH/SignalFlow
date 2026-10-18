@@ -38,6 +38,7 @@ export type IconName =
   | 'circle'
   | 'label'
   | 'chat'
+  | 'chart'
   | 'sentiment'
   | 'checklist'
   | 'automation'
@@ -212,6 +213,11 @@ export type IconName =
       <path d="M12 21a9 9 0 1 1 0-18 9 9 0 0 1 0 18Z" />
       <path d="M9 10h.01M15 10h.01" />
       <path d="M9.5 14.5a3.5 3.5 0 0 0 5 0" />
+    </template>
+    <!-- 今日概览：柱状统计 -->
+    <template v-else-if="name === 'chart'">
+      <path d="M4 20V6M4 20h16" />
+      <path d="M8.5 16.5v-4.5M13 16.5V9M17.5 16.5v-6.5" />
     </template>
     <!-- 清单：材料校验 -->
     <template v-else-if="name === 'checklist'">

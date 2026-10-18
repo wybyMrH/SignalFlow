@@ -27,6 +27,11 @@ class Feedback(Base):
     id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
+    # 业务编号：演示/展示用短编号（如 F1048），与前端 mock 的 id 口径一致。
+    # 主键仍为 uuid，编号仅用于列表/详情的可读展示，可为空（运行时新建反馈可留空）。
+    code: Mapped[str | None] = mapped_column(
+        String(32), nullable=True, index=True, comment="业务编号（展示用，如 F1048）"
+    )
     tenant_id: Mapped[str] = mapped_column(String(64), index=True, default="default")
     source: Mapped[str] = mapped_column(String(64), index=True, default="manual")
     source_ref: Mapped[str | None] = mapped_column(String(128), nullable=True)

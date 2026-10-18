@@ -89,6 +89,12 @@ class FeedbackService(ServiceBase):
         if params is None:
             params = PageParams()
 
+        # 排序：创建时间倒序（与前端 mock listFeedbacks 口径一致，保证两端列表同序）。
+        # 两趟稳定排序：先按业务编号升序（等价于 mock 数组的入库顺序），
+        # 再按创建时间倒序，使相同时间戳的记录顺序也与 mock 一致。
+        items = sorted(items, key=lambda it: getattr(it, "code", None) or str(it.id))
+        items = sorted(items, key=lambda it: it.created_at, reverse=True)
+
         total = len(items)
         start = params.offset
         end = start + params.page_size
@@ -169,4 +175,10 @@ class FeedbackService(ServiceBase):
         """待处理反馈数（new/analyzing/ai_reviewing）。"""
         return sum(
             count for status, count in self.count_by_status().items() if status in PENDING_STATUSES
+        )
+
+    def high_priority_count(self, threshold: int = 4) -> int:
+        """高优先级反馈数（priority >= threshold，与前端 mock 口径一致）。"""
+        return sum(
+            1 for it in self._repo.list_all() if (getattr(it, "priority", 0) or 0) >= threshold
         )

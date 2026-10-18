@@ -12,6 +12,9 @@ import type { FeedbackCreate, FeedbackListQuery, FeedbackStats, FeedbackView, Pa
 /** 演示租户 */
 export const DEMO_TENANT = 'demo-gov'
 
+/** 企业演示租户（企业侧/商务反馈，与后端 seed 的 demo-ent 口径一致） */
+export const DEMO_ENT = 'demo-ent'
+
 /**
  * 基于当前时间生成「最近 N 天」内的演示时间戳（UTC 日期键与 dashboard 聚合口径一致）。
  * hour 取值 0-10 对应本地（UTC+8）8-18 点工作时段，保证当天数据落在对应 UTC 日期。
@@ -109,6 +112,11 @@ export const feedbackDb: FeedbackView[] = [
   { id: 'F1062', tenant_id: DEMO_TENANT, source: 'hotline', source_ref: `HM-${mockRefDay(0)}-030`, content: '大厅排队时间太长了，每次都等一个多小时，能不能多开几个窗口？', author: '林晓', status: 'ai_replied', sentiment: 'negative', priority: 4, topic_id: 't2', topic_title: '大厅等候时间过长', reviewer: 'AI自动审批', created_at: mockUtc(0, 2, 0), updated_at: mockUtc(0, 8, 10) },
   { id: 'F1063', tenant_id: DEMO_TENANT, source: 'portal', source_ref: null, content: '我想咨询一下生育津贴的申领条件，需要连续缴费多久？', author: '周婷', status: 'ai_reviewing', sentiment: 'neutral', priority: 2, topic_id: 't4', topic_title: '政策咨询响应偏慢', reviewer: 'AI助手', created_at: mockUtc(0, 7, 30), updated_at: mockUtc(0, 8, 15) },
   { id: 'F1064', tenant_id: DEMO_TENANT, source: 'ticket', source_ref: `GD-${mockRefDay(0)}-020`, content: 'APP 闪退问题怎么处理？已经更新了最新版本还是不行。', author: '吴刚', status: 'ai_replied', sentiment: 'negative', priority: 3, topic_id: 't8', topic_title: '移动端 APP 操作不便', reviewer: 'AI自动审批', created_at: mockUtc(0, 3, 20), updated_at: mockUtc(0, 8, 20) },
+  // ── 企业租户（demo-ent）：商务/企业侧反馈，同时作为商务线索来源 ──
+  { id: 'F1101', tenant_id: DEMO_ENT, source: 'sales', source_ref: null, content: '我们公司有 400 多名设计师，现在每人单独建账号太麻烦，希望支持批量导入和角色分组。', author: '林倩', status: 'analyzing', sentiment: 'neutral', priority: 4, topic_id: 't9', topic_title: '企业批量账号管理', reviewer: '商务组', created_at: mockUtc(0, 9, 0), updated_at: mockUtc(0, 9, 0) },
+  { id: 'F1102', tenant_id: DEMO_ENT, source: 'sales', source_ref: null, content: '作为外包承接方，客户要求我们提供本地化部署版本，敏感数据不能出我们的机房。', author: '陈奕帆', status: 'analyzing', sentiment: 'neutral', priority: 5, topic_id: 't10', topic_title: '私有化部署需求', reviewer: '商务组', created_at: mockUtc(1, 9, 0), updated_at: mockUtc(1, 9, 0) },
+  { id: 'F1103', tenant_id: DEMO_ENT, source: 'sales', source_ref: null, content: '我们是省属国企，需要和内部 OA、统一认证对接，账号体系要对齐集团标准。', author: '孙杰', status: 'analyzing', sentiment: 'neutral', priority: 4, topic_id: 't11', topic_title: '统一认证对接', reviewer: '商务组', created_at: mockUtc(2, 9, 0), updated_at: mockUtc(2, 9, 0) },
+  { id: 'F1104', tenant_id: DEMO_ENT, source: 'sales', source_ref: null, content: '当前产品缺少审计日志导出，合规团队要求完整操作留痕，否则无法过等保三级。', author: '周敏', status: 'analyzing', sentiment: 'negative', priority: 5, topic_id: 't12', topic_title: '审计日志与合规', reviewer: '商务组', created_at: mockUtc(2, 10, 0), updated_at: mockUtc(2, 10, 0) },
 ]
 
 /** 文案截取：用于主题证据链摘要 */

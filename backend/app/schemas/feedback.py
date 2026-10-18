@@ -48,6 +48,9 @@ class FeedbackView(FeedbackRead):
     reviewer: str | None = None
     reply_content: str | None = None
     replied_at: datetime | None = None
+    # 业务编号（展示用短编号，如 F1048）：与前端 mock 数据 id 口径一致，
+    # 使 8088(mock) 与 5199(真后端) 的列表/详情展示完全相同；运行时新建反馈可为空。
+    code: str | None = None
 
 
 class FeedbackStats(BaseModel):

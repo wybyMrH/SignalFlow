@@ -36,6 +36,8 @@ export interface FeedbackView extends Feedback {
   /** 已发送的正式回复内容（历史回复展示） */
   reply_content?: string | null
   replied_at?: string | null
+  /** 业务编号（展示用短编号，如 F1048）；真后端与 mock 列表展示口径一致 */
+  code?: string | null
 }
 
 /** 创建反馈请求体（对应后端 FeedbackCreate） */

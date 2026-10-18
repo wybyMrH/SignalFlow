@@ -231,6 +231,7 @@ def _seed_feedbacks(session: Session) -> None:
             source_ref = f"{parts[0]}-{_ref_day(created_rel[0])}-{parts[-1]}"
         session.add(Feedback(
             id=uid,
+            code=r["id"],
             tenant_id=r["tenant_id"],
             source=r["source"],
             source_ref=source_ref,

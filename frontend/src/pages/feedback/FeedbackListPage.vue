@@ -274,7 +274,7 @@ function insertSuggestionToDraft() {
             <td class="nowrap">{{ sourceLabels[item.source as keyof typeof sourceLabels] ?? item.source }}</td>
             <td class="cell-content">
               <span class="row-title">{{ item.content }}</span>
-              <span class="row-id">{{ item.id }}</span>
+              <span class="row-id">{{ item.code ?? item.id }}</span>
             </td>
             <td class="nowrap dim">{{ item.topic_title ?? '—' }}</td>
             <td class="nowrap">
@@ -303,7 +303,7 @@ function insertSuggestionToDraft() {
     </section>
 
     <!-- 详情抽屉 -->
-    <Drawer :open="drawerOpen" :title="active ? `${active.id} 详情` : ''" @close="drawerOpen = false">
+    <Drawer :open="drawerOpen" :title="active ? `${active.code ?? active.id} 详情` : ''" @close="drawerOpen = false">
       <div v-if="active" class="detail">
         <div class="detail-meta">
           <StatusBadge :label="statusLabels[active.status]" :tone="statusTone[active.status]" />

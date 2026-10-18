@@ -77,8 +77,8 @@ def get_feedback_stats(service=Depends(_service)) -> FeedbackStats:
         resolved=counts.get("resolved", 0),
         replied=counts.get("replied", 0),
         closed=counts.get("closed", 0),
-        # 高优先级信号在 AI 分析切片接入后由 priority 字段回填
-        high_priority=0,
+        # 高优先级信号：priority >= 4 的反馈数（与前端 mock 统计口径一致）
+        high_priority=service.high_priority_count(),
     )
 
 

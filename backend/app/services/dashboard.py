@@ -15,7 +15,7 @@ from app.models.feedback import Feedback
 from app.repositories.feedback import FeedbackRepository
 from app.repositories.insight import InsightTopicRepository
 from app.services.base import ServiceBase
-from app.services.feedback import PENDING_STATUSES
+from app.services.feedback import PENDING_STATUSES, is_feedback_visible
 from sqlalchemy.orm import Session
 
 # 办结状态集合（办结率口径）
@@ -137,7 +137,7 @@ class DashboardService(ServiceBase):
             if cached is not None:
                 return cached
 
-        feedbacks = list(self._feedback.list_all())  # type: ignore[arg-type]
+        feedbacks = [f for f in self._feedback.list_all() if is_feedback_visible(f)]  # type: ignore[arg-type]
         kpis = self.compute_kpis(feedbacks, now=self._now(), overdue_days=overdue_days)
         topics = sorted(
             self._insights.list_all(),  # type: ignore[arg-type]
@@ -174,7 +174,7 @@ class DashboardService(ServiceBase):
             if cached is not None:
                 return cached
 
-        feedbacks: list[Feedback] = list(self._feedback.list_all())  # type: ignore[arg-type]
+        feedbacks: list[Feedback] = [f for f in self._feedback.list_all() if is_feedback_visible(f)]  # type: ignore[arg-type]
         kpis = self.compute_kpis(feedbacks, now=self._now(), overdue_days=overdue_days)
         topics = sorted(
             self._insights.list_all(),  # type: ignore[arg-type]

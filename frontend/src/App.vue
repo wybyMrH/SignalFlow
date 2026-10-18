@@ -14,6 +14,9 @@ const app = useAppStore()
 
 const isMock = import.meta.env.VITE_USE_MOCK !== 'false'
 
+/** 开源仓库地址：顶栏 GitHub 入口点击后在新标签打开，便于查看与 Star */
+const repoUrl = 'https://github.com/wybyMrH/SignalFlow'
+
 const navItems: Array<{ to: string; label: string; icon: IconName }> = [
   { to: '/', label: '总览', icon: 'dashboard' },
   { to: '/feedback', label: '反馈管理', icon: 'feedback' },
@@ -59,6 +62,16 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
         <h1 class="page-title">{{ route.meta.title }}</h1>
         <div class="topbar-right">
           <span v-if="isMock" class="mock-badge" title="当前使用模拟数据，设 VITE_USE_MOCK=false 切换真实后端">Mock</span>
+          <a
+            class="gh-link"
+            :href="repoUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="在 GitHub 打开 SignalFlow 仓库并 Star 支持"
+          >
+            <SfIcon name="github" :size="18" />
+            <span class="gh-star"><SfIcon name="need" :size="12" />Star</span>
+          </a>
           <span class="user">管理员</span>
         </div>
       </header>
@@ -214,6 +227,31 @@ const navItems: Array<{ to: string; label: string; icon: IconName }> = [
 .user {
   font-size: 13px;
   color: var(--sf-text-secondary);
+}
+
+/* GitHub 入口：图标 + Star 引导，悬停高亮 */
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 10px;
+  color: var(--sf-text-secondary);
+  text-decoration: none;
+  border: 1px solid var(--sf-border);
+  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.gh-link:hover {
+  color: var(--sf-primary);
+  border-color: var(--sf-primary-border);
+  background: var(--sf-primary-soft);
+}
+.gh-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  line-height: 1;
 }
 
 .content {

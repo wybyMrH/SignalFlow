@@ -214,6 +214,7 @@ SignalFlow/
 │   ├── current-state.md     # 当前阶段状态与验证证据
 │   ├── next-stage-plan.md   # 下一阶段计划与已知限制
 │   ├── adrs/                # 架构决策记录（ADR-0001/0002）
+│   ├── screenshots/         # 12 个功能页面演示截图（README 展示 4 张）
 │   └── backend-integration-plan.md   # 后端真实接入部署清单（待补充）
 │
 └── AGENTS.md                # 项目开发规则书（project-compass 安装）
@@ -233,21 +234,23 @@ SignalFlow/
 
 ### LangGraph 工作流配置
 
-![工作流配置](docs/screenshots/workflow-config.png)
+![工作流配置](docs/screenshots/workflows.png)
 
 *5 大预置模板，节点流程可视化，Agent 绑定与工具链配置*
 
 ### 访谈 → 商务线索联动
 
-![访谈联动](docs/screenshots/interview-detail.png)
+![访谈联动](docs/screenshots/interview.png)
 
 *客户访谈 AI 提炼痛点 → 识别合作意向 → 一键生成线索并汇入商务洞察*
 
 ### Agent 与资源管理
 
-![Agent 配置](docs/screenshots/agent-config.png)
+![Agent 配置](docs/screenshots/agents.png)
 
 *5 大预置 Agent 运行统计、工具权限、工作流绑定；资源健康实时监控与日志审计*
+
+> 其余页面（反馈管理、洞察与决策、路线图、AI 自动化、商务洞察、政务适配、资源管理、系统设置等）的完整截图见 `docs/screenshots/`。
 
 ---
 
@@ -288,3 +291,5 @@ SignalFlow/
 |------|------|--------|
 | v0.1.0 | 2026-10-15 | 前端 Mock 全流程闭环：12 页面 + 运营驾驶舱 + AI 联动 + 工作流配置 + 访谈→线索联动 + Store 守卫修复；Docker 容器化部署验证通过；文档体系（规格/状态/计划/ADR）落盘 |
 | v0.2.0 | 2026-10-15 | 后端分层架构落地：Stage-0 基础设施与公共抽象层；Stage-1 十二大 Domain ORM + Repository + Alembic 迁移 + pytest CRUD 全量通过；Stage-2 Service 层全量测试通过；Stage-3 LLM 网关（LiteLLM）与 LangGraph AI 工作流全量测试通过（43/43）；渠道适配器扩展点（工单/邮件/IM/访谈/政务热线）就绪；数据种子与集成测试覆盖补齐 |
+| v0.3.0 | 2026-10-17 | 前后端端到端联调收尾：资源管理页契约修复（总览资源健康卡不再显示 undefined）、商务洞察接入商务侧反馈、系统设置页扩展为 7 个配置分区并改为并排布局 |
+| v0.4.0 | 2026-10-18 | 双模式一致性与演示完善：8088（Mock 构建产物）与 5199（真后端）12 个页面结构与体验对齐；反馈列表排序、`code` 编号（F1xxx/F2xxx）与高优先级统计口径两端统一；政务适配契约修复、路线图/洞察/设置页完善；演示数据时间轴改造——近 14 天每日错落分布、并预置未来两周数据，展示与统计只计入「今天及以前」的样本，未来数据到期后自动出现，演示时无需再生成或改时间；顶部导航新增 GitHub 图标直达仓库 Star；`docs/screenshots/` 归档 12 个功能页面全套截图（README 展示 4 张） |

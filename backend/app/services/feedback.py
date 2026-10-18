@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from app.core.exceptions import ValidationError
@@ -33,6 +34,17 @@ FEEDBACK_STATUS_FLOW: dict[str, set[str]] = {
 
 # 待处理状态（用于驾驶舱 KPI）
 PENDING_STATUSES = {"new", "analyzing", "ai_reviewing"}
+
+
+def is_feedback_visible(feedback: Feedback) -> bool:
+    """可见性过滤：仅展示/统计创建日期不晚于今天的反馈。
+
+    种子数据预置了未来两周样本（created_at 落在锚点之后），
+    未到期时从列表与统计中排除，到期后自动出现。
+    """
+    if feedback.created_at is None:
+        return True
+    return feedback.created_at.date() <= datetime.now(timezone.utc).date()
 
 
 class FeedbackService(ServiceBase):
@@ -74,7 +86,7 @@ class FeedbackService(ServiceBase):
         现阶段的过滤在内存中进行（反馈量级可控）；
         数据量增长后可将条件下推到 Repository 的 SQL 查询。
         """
-        items: list[Feedback] = list(self._repo.list_all())  # type: ignore[arg-type]
+        items = [it for it in self._repo.list_all() if is_feedback_visible(it)]  # type: ignore[arg-type]
         if source:
             items = [it for it in items if it.source == source]
         if status:
@@ -168,6 +180,8 @@ class FeedbackService(ServiceBase):
         """按状态统计反馈数量。"""
         result: dict[str, int] = {}
         for it in self._repo.list_all():  # type: ignore[arg-type]
+            if not is_feedback_visible(it):
+                continue
             result[it.status] = result.get(it.status, 0) + 1
         return result
 
@@ -180,5 +194,7 @@ class FeedbackService(ServiceBase):
     def high_priority_count(self, threshold: int = 4) -> int:
         """高优先级反馈数（priority >= threshold，与前端 mock 口径一致）。"""
         return sum(
-            1 for it in self._repo.list_all() if (getattr(it, "priority", 0) or 0) >= threshold
+            1
+            for it in self._repo.list_all()
+            if is_feedback_visible(it) and (getattr(it, "priority", 0) or 0) >= threshold
         )

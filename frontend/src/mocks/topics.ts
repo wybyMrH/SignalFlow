@@ -6,7 +6,7 @@
  */
 
 import type { InsightDashboard, InsightTopic, PriorityScoreCard, ScoreDimension, TopicEvidence, TopicTrend } from '@/types'
-import { excerpt, feedbackDb } from './feedbackDb'
+import { excerpt, visibleFeedbacks } from './feedbackDb'
 import { sourceLabels } from '@/utils/labels'
 
 /** 主题基础定义（静态，模拟工作流聚类 + 优先级评估结果） */
@@ -152,7 +152,7 @@ function makeScoreCard(def: TopicDef): PriorityScoreCard {
 /** 动态组装主题（计数/证据链/最近信号时间） */
 export function buildTopics(): InsightTopic[] {
   return topicDefs.map((def) => {
-    const rows = feedbackDb
+    const rows = visibleFeedbacks()
       .filter((r) => r.topic_id === def.id)
       .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0) || b.created_at.localeCompare(a.created_at))
 

@@ -5,7 +5,11 @@
 #   cd deploy
 #   cp .env.example .env    # 修改密钥与端口
 #   docker compose up -d --build
-# 访问：前端 http://localhost:8080 ，后端健康检查 http://localhost:8000/api/v1/healthz
+# 访问：前端 http://localhost:${FRONTEND_PORT:-8080}（本仓库 .env 设为 8088）
+#      后端健康检查 http://localhost:${BACKEND_PORT:-8000}/api/v1/healthz
+#
+# 注意：8088(docker 构建, mock 数据) 与 5199(vite dev, 真实后端) 共用同一套 frontend/src 源码，
+# 界面功能必须一致。改动 frontend/src 后请执行 deploy/rebuild-frontend.sh 重建 8088，避免旧构建不一致。
 
 name: signalflow
 

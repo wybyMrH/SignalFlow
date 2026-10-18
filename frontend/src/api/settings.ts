@@ -1,7 +1,7 @@
 import http from './http'
 import { useMock } from './mock'
 import { buildSettingsView as mockSettings, mockDelay } from '@/mocks'
-import type { SettingsView, LLMConfig, EmailConfig, AppearanceConfig, GlobalModelParams } from '@/types'
+import type { SettingsView, LLMConfig, EmailConfig, AppearanceConfig, GlobalModelParams, ServerConfig } from '@/types'
 
 /** 系统设置视图，对应 GET /settings */
 export async function fetchSettingsView(): Promise<SettingsView> {
@@ -46,6 +46,24 @@ export async function updateGlobalModelParams(payload: Partial<GlobalModelParams
     return
   }
   await http.put('/settings/global-model-params', payload)
+}
+
+/** 更新服务器配置（日志级别等运行时可调参数） */
+export async function updateServerConfig(payload: Partial<ServerConfig>): Promise<void> {
+  if (useMock()) {
+    await mockDelay(null, 300)
+    return
+  }
+  await http.put('/settings/server', payload)
+}
+
+/** 更新数据源与权限说明 */
+export async function updateNotesConfig(payload: { ai_note?: string; auth_note?: string }): Promise<void> {
+  if (useMock()) {
+    await mockDelay(null, 300)
+    return
+  }
+  await http.put('/settings/notes', payload)
 }
 
 /** 切换渠道启用 / 停用 */

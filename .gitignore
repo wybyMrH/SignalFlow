@@ -33,3 +33,4 @@ Thumbs.db
 tmp/
 # ---------- 浏览器验证临时产物 ----------
 .dumate/
+.playwright-cli/

@@ -7,10 +7,11 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from app.core.exceptions import NotFoundError, ValidationError
+from app.models.audit import AuditLog
 from app.models.gov import GovAlertItem, GovHotTopic, GovPolicyNotice
 from app.repositories.gov import (
     GovAlertItemRepository,
@@ -285,3 +286,217 @@ class GovService(ServiceBase):
         if status:
             notices = [n for n in notices if n.status == status]
         return notices
+
+    # ──────────────────────────────────────────────
+    # 总览聚合（对齐前端 GovOverview 契约）
+    # ──────────────────────────────────────────────
+
+    @staticmethod
+    def _topic_payload(topic: GovHotTopic) -> dict[str, Any]:
+        """ORM -> 前端 GovHotTopic 契约。"""
+        return {
+            "id": topic.id,
+            "title": topic.title,
+            "summary": topic.summary,
+            "coverage": topic.coverage,
+            "growth": topic.growth,
+            "regions": topic.regions or [],
+            "department": topic.department,
+            "root_cause": topic.root_cause,
+            "evidence": topic.evidence,
+            "task_status": topic.task_status,
+            "task_id": topic.task_id,
+            "created_at": topic.created_at.isoformat() if topic.created_at else None,
+        }
+
+    @staticmethod
+    def _alert_payload(alert: GovAlertItem) -> dict[str, Any]:
+        """ORM -> 前端 GovAlertItem 契约。"""
+        return {
+            "id": alert.id,
+            "level": alert.level,
+            "title": alert.title,
+            "summary": alert.summary,
+            "trigger": alert.trigger,
+            "regions": alert.regions or [],
+            "evidence_count": alert.evidence_count,
+            "dispatched": alert.dispatched,
+            "dispatched_to": alert.dispatched_to,
+            "created_at": alert.created_at.isoformat() if alert.created_at else None,
+        }
+
+    @staticmethod
+    def _notice_payload(notice: GovPolicyNotice) -> dict[str, Any]:
+        """ORM -> 前端 GovPolicyNotice 契约。"""
+        return {
+            "id": notice.id,
+            "title": notice.title,
+            "content": notice.content,
+            "status": notice.status,
+            "scope": notice.scope,
+            "channel": notice.channel,
+            "sent_count": notice.sent_count,
+            "read_rate": notice.read_rate,
+            "updated_at": notice.updated_at.isoformat() if notice.updated_at else None,
+        }
+
+    def overview(self) -> dict[str, Any]:
+        """聚合政务总览视图。
+
+        返回结构对齐前端 GovOverview（types/index.ts），全部统计基于库内真实数据：
+        summary 的量来自洞察主题反馈计数；分级按主题优先级分段；督办按主题状态；
+        区域聚合热点主题与预警的涉及区域；审计取自审计日志表。
+        """
+        topics = self.list_hot_topics()
+        alerts = self.list_alerts()
+        notices = self.list_notices(status="published")
+        insights = self._insights.list()
+
+        now = datetime.now(timezone.utc)
+        period_start = now - timedelta(days=30)
+
+        # 汇总统计
+        total_count = sum(t.feedback_count or 0 for t in insights)
+        weekly_new = sum(
+            1
+            for t in insights
+            if (t.updated_at or now) >= period_start
+        )
+        pending_count = sum(1 for t in topics if t.task_status == "pending")
+        generated_count = sum(1 for t in topics if t.task_status == "generated")
+        resolve_rate = round(generated_count / len(topics), 3) if topics else 0.0
+
+        # 最高预警等级（red > orange > yellow > blue）
+        level_order = {"blue": 0, "yellow": 1, "orange": 2, "red": 3}
+        highest_alert = "blue"
+        for alert in alerts:
+            if level_order.get(alert.level, 0) > level_order[highest_alert]:
+                highest_alert = alert.level
+
+        # 诉求分级：按洞察主题优先级分段，count 为该段主题覆盖的反馈总量
+        segments: list[tuple[str, str, int, int, str]] = [
+            ("A", "紧急敏感", 90, 999, "danger"),
+            ("B", "重点诉求", 75, 90, "warning"),
+            ("C", "一般事项", 60, 75, "info"),
+            ("D", "咨询建议", 0, 60, "neutral"),
+        ]
+        classifications: list[dict[str, Any]] = []
+        for level, label, lo, hi, tone in segments:
+            matched = [
+                t
+                for t in insights
+                if lo <= (t.priority_score or 0) < hi
+            ]
+            count = sum(t.feedback_count or 0 for t in matched)
+            classifications.append(
+                {
+                    "level": level,
+                    "label": label,
+                    "count": count,
+                    "pct": round(count / total_count * 100, 1) if total_count else 0.0,
+                    "tone": tone,
+                }
+            )
+
+        # 督办事项：按热点主题的治理任务状态统计
+        supervision_specs: list[tuple[str, str, str]] = [
+            ("一级督办", "市级督办事项", "generated"),
+            ("二级督办", "部门督办事项", "processing"),
+            ("三级督办", "窗口整改事项", "pending"),
+        ]
+        supervisions: list[dict[str, Any]] = [
+            {
+                "level": level,
+                "label": label,
+                "count": sum(1 for t in topics if t.task_status == status),
+                "overdue": 0,
+            }
+            for level, label, status in supervision_specs
+        ]
+
+        # 区域分布：聚合热点主题与预警的涉及区域
+        region_counter: dict[str, int] = {}
+        region_hot: dict[str, str] = {}
+        region_depts: dict[str, set[str]] = {}
+        for t in topics:
+            for region in t.regions or []:
+                region_counter[region] = region_counter.get(region, 0) + 1
+                region_hot.setdefault(region, t.title or "")
+                if t.department:
+                    region_depts.setdefault(region, set()).add(t.department)
+        for alert in alerts:
+            for region in alert.regions or []:
+                region_counter[region] = region_counter.get(region, 0) + 1
+        region_total = sum(region_counter.values()) or 1
+        regions: list[dict[str, Any]] = [
+            {
+                "region": region,
+                "count": count,
+                "pct": round(count / region_total * 100, 1),
+                "trend": "flat",
+                "hot_issue": region_hot.get(region, ""),
+                "departments": sorted(region_depts.get(region, set())),
+            }
+            for region, count in sorted(
+                region_counter.items(), key=lambda kv: (-kv[1], kv[0])
+            )
+        ]
+
+        # 审计留痕：取审计日志最近 6 条
+        audit_action_label = {
+            "CREATE": "创建",
+            "UPDATE": "更新",
+            "DELETE": "删除",
+            "APPROVE": "审批",
+            "REJECT": "驳回",
+            "TRIGGER": "触发工作流",
+            "LOGIN": "登录",
+            "LOGOUT": "登出",
+        }
+        audits: list[dict[str, Any]] = []
+        try:
+            audit_rows = (
+                self._db.query(AuditLog)
+                .order_by(AuditLog.created_at.desc())
+                .limit(6)
+                .all()
+            )
+        except Exception:
+            audit_rows = []
+        for row in audit_rows:
+            audits.append(
+                {
+                    "id": row.id,
+                    "action": audit_action_label.get(row.action, row.action),
+                    "operator": row.user_id or "系统",
+                    "time": (
+                        row.created_at.strftime("%Y-%m-%d %H:%M")
+                        if row.created_at
+                        else ""
+                    ),
+                    "target": row.entity_id or (row.entity_type or ""),
+                }
+            )
+
+        return {
+            "period": (
+                f"{period_start.strftime('%Y-%m-%d')} ~ {now.strftime('%Y-%m-%d')}"
+            ),
+            "generated_at": now.isoformat(),
+            "summary": {
+                "total_count": total_count,
+                "weekly_new": weekly_new,
+                "pending_count": pending_count,
+                "overdue_count": 0,
+                "resolve_rate": resolve_rate,
+                "highest_alert": highest_alert,
+            },
+            "classifications": classifications,
+            "supervisions": supervisions,
+            "regions": regions,
+            "topics": [self._topic_payload(t) for t in topics],
+            "alerts": [self._alert_payload(a) for a in alerts],
+            "notices": [self._notice_payload(n) for n in notices],
+            "audits": audits,
+            "updated_at": now.isoformat(),
+        }

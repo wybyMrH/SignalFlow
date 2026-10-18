@@ -23,6 +23,7 @@ const props = defineProps<{
     | 'resources'
     | 'workflows'
     | 'dashboard'
+    | 'settings'
 }>()
 
 const ai = useAIStore()
@@ -218,6 +219,23 @@ const contextConfig = {
       '今日概览',
       '异常提醒',
       '自动化任务运行状态',
+    ],
+  },
+  settings: {
+    title: '配置助手',
+    welcome: '我可以帮您理解系统配置项、给出修改建议或排查配置问题。',
+    categories: [
+      { label: '配置说明', icon: 'settings' },
+      { label: '修改建议', icon: 'magic' },
+      { label: '问题排查', icon: 'alert' },
+      { label: '密钥安全', icon: 'shield' },
+      { label: '渠道接入', icon: 'link' },
+      { label: '运行环境', icon: 'server' },
+    ],
+    shortcuts: [
+      'AI 气泡主题怎么切换？',
+      '日志级别如何调整？',
+      '数据源权限说明在哪修改？',
     ],
   },
 }

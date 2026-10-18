@@ -60,6 +60,15 @@ class GlobalModelParamsUpdate(BaseModel):
     tone: str | None = None
 
 
+class ServerConfigUpdate(BaseModel):
+    log_level: str | None = None
+
+
+class NotesConfigUpdate(BaseModel):
+    ai_note: str | None = None
+    auth_note: str | None = None
+
+
 class ChannelToggleResult(BaseModel):
     code: str = "SUCCESS"
     message: str
@@ -168,7 +177,9 @@ def get_settings(
             "app_env": os.getenv("APP_ENV", "development"),
             "app_host": os.getenv("APP_HOST", "0.0.0.0"),
             "app_port": int(os.getenv("APP_PORT", "8000")),
-            "log_level": os.getenv("LOG_LEVEL", "INFO"),
+            "log_level": service.get_config_or(
+                "log_level", os.getenv("LOG_LEVEL", "INFO")
+            ),
         },
         "agent_prompts": agent_prompts,
         "ai_note": service.get_config_or(
@@ -249,6 +260,37 @@ def update_global_model_params(
     if payload.tone is not None:
         service.set_config("model_tone", payload.tone)
     return {"code": "SUCCESS", "message": "全局模型参数已更新"}
+
+
+@router.put("/server")
+def update_server_config(
+    payload: ServerConfigUpdate,
+    service: SettingsService = Depends(_service),
+) -> dict:
+    """更新服务器运行参数（启动级参数保持环境变量，仅支持运行时可调项）。"""
+    if payload.log_level is not None:
+        valid_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        level = payload.log_level.strip().upper()
+        if level not in valid_levels:
+            return {
+                "code": "INVALID_ARGUMENT",
+                "message": f"日志级别仅支持 {'、'.join(sorted(valid_levels))}",
+            }
+        service.set_config("log_level", level)
+    return {"code": "SUCCESS", "message": "服务器配置已更新"}
+
+
+@router.put("/notes")
+def update_notes_config(
+    payload: NotesConfigUpdate,
+    service: SettingsService = Depends(_service),
+) -> dict:
+    """更新数据源与权限说明文案（AI 洞察 / 身份认证）。"""
+    if payload.ai_note is not None:
+        service.set_config("ai_note", payload.ai_note)
+    if payload.auth_note is not None:
+        service.set_config("auth_note", payload.auth_note)
+    return {"code": "SUCCESS", "message": "数据源与权限说明已更新"}
 
 
 @router.put("/channels/{key}/toggle")

@@ -135,6 +135,9 @@ async function draftAction(draftId: string, to: DraftStatus) {
             </li>
           </ul>
         </article>
+        <div v-if="itemsOf(g.key).length === 0" class="r-card empty">
+          <span class="empty-txt">暂无{{ g.label }}条目</span>
+        </div>
       </section>
     </div>
 
@@ -314,12 +317,27 @@ async function draftAction(draftId: string, to: DraftStatus) {
   display: grid;
   grid-template-columns: repeat(4, minmax(260px, 1fr));
   gap: var(--sf-space-3);
-  align-items: start;
+  align-items: stretch;
 }
 .col {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-2);
+  min-height: 200px;
+}
+.r-card.empty {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  border: 1px dashed var(--sf-border);
+  background: transparent;
+  box-shadow: none;
+}
+.empty-txt {
+  font-size: var(--sf-font-12);
+  color: var(--sf-text-faint);
 }
 .col-head {
   display: flex;
@@ -333,6 +351,7 @@ async function draftAction(draftId: string, to: DraftStatus) {
   background: var(--sf-surface);
   box-shadow: var(--sf-shadow);
   padding: var(--sf-space-2) var(--sf-space-3);
+  flex: 1 1 auto;
 }
 .r-top {
   display: flex;

@@ -21,9 +21,12 @@ import {
   updateEmailConfig,
   updateAppearanceConfig,
   updateGlobalModelParams,
+  updateServerConfig,
+  updateNotesConfig,
   toggleChannel,
 } from '@/api/settings'
 import { updateAgentScenario } from '@/api/agents'
+import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import type { SettingsView, AgentPromptConfig } from '@/types'
 import { formatDateTime } from '@/utils'
 
@@ -257,6 +260,71 @@ async function saveGlobal() {
 }
 
 // ──────────────────────────────────────────────
+// 服务器配置编辑（日志级别）
+// ──────────────────────────────────────────────
+
+const logLevelOptions = ['DEBUG', 'INFO', 'WARNING', 'ERROR']
+
+const serverEditing = ref(false)
+const serverEdit = ref('INFO')
+
+function openServerEdit() {
+  if (!view.value) return
+  serverEdit.value = view.value.server.log_level || 'INFO'
+  serverEditing.value = true
+}
+
+async function saveServer() {
+  if (!view.value) return
+  saving.value.server = true
+  try {
+    await updateServerConfig({ log_level: serverEdit.value })
+    view.value.server.log_level = serverEdit.value
+    serverEditing.value = false
+    showMsg('服务器配置已保存')
+  } catch (e: any) {
+    showMsg(e?.response?.data?.message || '保存失败')
+  } finally {
+    saving.value.server = false
+  }
+}
+
+// ──────────────────────────────────────────────
+// 数据源与权限说明编辑
+// ──────────────────────────────────────────────
+
+const notesEditing = ref(false)
+const notesEdit = ref({ ai_note: '', auth_note: '' })
+
+function openNotesEdit() {
+  if (!view.value) return
+  notesEdit.value = {
+    ai_note: view.value.ai_note || '',
+    auth_note: view.value.auth_note || '',
+  }
+  notesEditing.value = true
+}
+
+async function saveNotes() {
+  if (!view.value) return
+  saving.value.notes = true
+  try {
+    await updateNotesConfig({
+      ai_note: notesEdit.value.ai_note,
+      auth_note: notesEdit.value.auth_note,
+    })
+    view.value.ai_note = notesEdit.value.ai_note
+    view.value.auth_note = notesEdit.value.auth_note
+    notesEditing.value = false
+    showMsg('数据源与权限说明已保存')
+  } catch (e: any) {
+    showMsg(e?.response?.data?.message || '保存失败')
+  } finally {
+    saving.value.notes = false
+  }
+}
+
+// ──────────────────────────────────────────────
 // Agent 角色提示词编辑
 // ──────────────────────────────────────────────
 
@@ -398,7 +466,15 @@ async function savePrompt() {
             />
           </dd>
         </dl>
-        <p class="hint">服务器参数由环境变量控制，如需调整请修改后端 .env 文件。</p>
+        <div class="actions">
+          <button type="button" class="btn ghost" @click="openServerEdit">
+            <SfIcon name="edit" :size="13" /> 编辑
+          </button>
+        </div>
+        <p class="hint">
+          <SfIcon name="info" :size="12" />
+          运行环境与监听地址为启动级参数（改 .env），日志级别可在页内调整。
+        </p>
       </section>
 
       <!-- 邮件提醒 -->
@@ -480,7 +556,12 @@ async function savePrompt() {
 
       <!-- 数据源与权限说明 -->
       <section class="card note">
-        <h3 class="title">数据源与权限说明</h3>
+        <div class="head">
+          <h3 class="title">数据源与权限说明</h3>
+          <button type="button" class="btn micro ghost" @click="openNotesEdit">
+            <SfIcon name="edit" :size="12" /> 编辑
+          </button>
+        </div>
         <dl class="kv">
           <dt>数据源</dt>
           <dd>{{ view.mock_mode ? '使用模拟数据（VITE_USE_MOCK 默认开启）' : '使用真实后端接口' }}</dd>
@@ -648,6 +729,51 @@ async function savePrompt() {
       </form>
     </Drawer>
 
+    <!-- 服务器配置编辑抽屉 -->
+    <Drawer :open="serverEditing" title="编辑服务器配置" @close="serverEditing = false">
+      <form class="drawer-form" @submit.prevent="saveServer">
+        <label class="field">
+          <span class="field-label">日志级别</span>
+          <select v-model="serverEdit">
+            <option v-for="lv in logLevelOptions" :key="lv" :value="lv">{{ lv }}</option>
+          </select>
+          <span class="field-hint">运行环境、监听地址为启动级参数（修改 .env 生效），日志级别调整即时写入配置。</span>
+        </label>
+        <div class="drawer-actions">
+          <button type="button" class="btn ghost" @click="serverEditing = false">取消</button>
+          <button type="submit" class="btn primary" :disabled="saving.server">
+            {{ saving.server ? '保存中…' : '保存' }}
+          </button>
+        </div>
+      </form>
+    </Drawer>
+
+    <!-- 数据源与权限说明编辑抽屉 -->
+    <Drawer
+      :open="notesEditing"
+      title="编辑数据源与权限说明"
+      @close="notesEditing = false"
+    >
+      <form class="drawer-form" @submit.prevent="saveNotes">
+        <label class="field">
+          <span class="field-label">AI 洞察说明</span>
+          <textarea v-model="notesEdit.ai_note" rows="3" placeholder="描述当前 AI 洞察能力的实现方式与产出边界..." />
+          <span class="field-hint">展示在设置页说明区，向使用者说明洞察能力来源。</span>
+        </label>
+        <label class="field">
+          <span class="field-label">身份认证说明</span>
+          <textarea v-model="notesEdit.auth_note" rows="3" placeholder="描述登录与权限接入状态..." />
+          <span class="field-hint">展示在设置页说明区，说明统一身份认证接入情况。</span>
+        </label>
+        <div class="drawer-actions">
+          <button type="button" class="btn ghost" @click="notesEditing = false">取消</button>
+          <button type="submit" class="btn primary" :disabled="saving.notes">
+            {{ saving.notes ? '保存中…' : '保存' }}
+          </button>
+        </div>
+      </form>
+    </Drawer>
+
     <!-- Agent 提示词编辑抽屉 -->
     <Drawer
       :open="promptDrawerOpen"
@@ -686,6 +812,9 @@ async function savePrompt() {
         </div>
       </form>
     </Drawer>
+
+    <!-- AI 配置助手气泡 -->
+    <AIFloatingAssistant context="settings" />
   </div>
 </template>
 
@@ -693,8 +822,8 @@ async function savePrompt() {
 .st {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--sf-space-3);
-  align-items: start;
+  gap: var(--sf-space-2);
+  align-items: stretch;
 }
 
 /* 跨全宽分区 */
@@ -717,11 +846,14 @@ async function savePrompt() {
 
 /* 卡片 */
 .card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   background: var(--sf-surface);
   border: 1px solid var(--sf-border);
   border-radius: var(--sf-radius);
   box-shadow: var(--sf-shadow);
-  padding: var(--sf-space-3) var(--sf-space-4);
+  padding: var(--sf-space-2) var(--sf-space-3);
 }
 .head {
   display: flex;
@@ -776,25 +908,30 @@ async function savePrompt() {
   font-variant-numeric: tabular-nums;
 }
 
-/* KV */
+/* KV：两对一行，提升信息密度 */
 .kv {
   margin: 0;
   display: grid;
-  grid-template-columns: 100px 1fr;
-  gap: var(--sf-space-2) var(--sf-space-3);
+  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: var(--sf-space-3);
+  row-gap: 5px;
   font-size: var(--sf-font-13);
 }
 .kv dt {
   color: var(--sf-text-faint);
+  white-space: nowrap;
 }
 .kv dd {
   margin: 0;
+  min-width: 0;
   color: var(--sf-text-secondary);
+  word-break: break-word;
 }
 
-/* 操作按钮区 */
+/* 操作按钮区：底部拉伸对齐 */
 .actions {
-  margin-top: var(--sf-space-2);
+  margin-top: auto;
+  padding-top: var(--sf-space-1);
   display: flex;
   gap: 8px;
 }
@@ -1034,9 +1171,9 @@ async function savePrompt() {
   color: var(--sf-text);
 }
 
-/* 说明卡片 */
+/* 说明卡片：标题间距由 .head 控制 */
 .note .title {
-  margin-bottom: var(--sf-space-2);
+  margin-bottom: 0;
 }
 
 /* 响应式：窄屏折叠为单列 */

@@ -5,17 +5,20 @@
  * 理念：每个主题可解释、可下钻到原始反馈原文；一屏一焦点（优先级评分卡）。
  */
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 import AIFloatingAssistant from '@/components/ai/AIFloatingAssistant.vue'
 import BarRow from '@/components/common/BarRow.vue'
 import Skeleton from '@/components/common/Skeleton.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import type { InsightTopic, PriorityLevel } from '@/types'
+import { getTopicCases, type CaseStatus, type GovernanceCase } from '@/mocks/cases'
 import { useInsightsStore } from '@/stores/insights'
+import type { InsightTopic, PriorityLevel, RoadmapItem } from '@/types'
 import { formatDate } from '@/utils'
 import { priorityLabels, priorityTone, sentimentLabels, sentimentTone, sourceLabels } from '@/utils/labels'
 
 const insights = useInsightsStore()
+const router = useRouter()
 const selectedId = ref<string | null>(null)
 
 const topics = computed(() => insights.dashboard?.items ?? [])
@@ -23,6 +26,22 @@ const selected = computed<InsightTopic | null>(() => {
   if (!selectedId.value) return topics.value[0] ?? null
   return topics.value.find((t) => t.id === selectedId.value) ?? null
 })
+
+/** 治理案例（按当前主题） */
+const selectedCases = computed<GovernanceCase[]>(() => (selected.value ? getTopicCases(selected.value.id) : []))
+
+/** 路线图项（供闭环选目标规划） */
+const roadmapItems = computed<RoadmapItem[]>(() => insights.roadmap?.items ?? [])
+const caseStatusMeta: Record<CaseStatus, { label: string; tone: 'success' | 'info' | 'neutral' }> = {
+  done: { label: '已落地', tone: 'success' },
+  doing: { label: '推进中', tone: 'info' },
+  planned: { label: '已规划', tone: 'neutral' },
+}
+
+const targetRoadmapId = ref('')
+const creating = ref(false)
+const createdMsg = ref<{ ok: boolean; text: string } | null>(null)
+let roadmapLoaded = false
 
 const trendMeta: Record<InsightTopic['trend'], { label: string; tone: 'success' | 'warning' | 'neutral' }> = {
   up: { label: '上升', tone: 'warning' },
@@ -34,10 +53,59 @@ const levelTone: Record<PriorityLevel, 'danger' | 'warning' | 'info' | 'neutral'
 
 onMounted(() => {
   void insights.fetchDashboard()
+  void insights.fetchRoadmap().then(() => {
+    if (selected.value) {
+      const item = roadmapItems.value.find((r) => r.topic_id === selected.value?.id)
+      targetRoadmapId.value = item?.id ?? (roadmapItems.value[0]?.id ?? '')
+    }
+  })
 })
 
 function select(id: string) {
   selectedId.value = id
+  createdMsg.value = null
+  // 自动匹配与主题关联的路线图项
+  const item = roadmapItems.value.find((r) => r.topic_id === id)
+  targetRoadmapId.value = item?.id ?? (roadmapItems.value[0]?.id ?? '')
+}
+
+async function ensureRoadmap() {
+  if (!roadmapLoaded) {
+    roadmapLoaded = true
+    try {
+      await insights.fetchRoadmap()
+      if (selected.value) {
+        const item = roadmapItems.value.find((r) => r.topic_id === selected.value?.id)
+        targetRoadmapId.value = item?.id ?? (roadmapItems.value[0]?.id ?? '')
+      }
+    } catch {
+      roadmapLoaded = false
+    }
+  }
+}
+
+async function createGovTask() {
+  const t = selected.value
+  if (!t || !targetRoadmapId.value || creating.value) return
+  creating.value = true
+  createdMsg.value = null
+  try {
+    await insights.createTask({
+      roadmap_id: targetRoadmapId.value,
+      title: `专项治理：${t.title}`,
+      owner: roadmapItems.value.find((r) => r.id === targetRoadmapId.value)?.owner ?? '运营管理组',
+      priority: t.priority_score >= 85 ? 1 : t.priority_score >= 70 ? 2 : 3,
+    })
+    createdMsg.value = { ok: true, text: `已生成治理任务「专项治理：${t.title}」，可在路线图中跟踪落地。` }
+  } catch {
+    createdMsg.value = { ok: false, text: '任务生成失败，请稍后重试。' }
+  } finally {
+    creating.value = false
+  }
+}
+
+function goRoadmap() {
+  void router.push('/roadmap')
 }
 </script>
 
@@ -121,6 +189,37 @@ function select(id: string) {
             </ul>
           </div>
         </div>
+
+        <div class="case-sec">
+          <h3 class="sec-title">治理案例参考</h3>
+          <div v-if="selectedCases.length" class="case-grid">
+            <div v-for="c in selectedCases" :key="c.id" class="case-card">
+              <div class="case-top">
+                <span class="case-name">{{ c.title }}</span>
+                <StatusBadge :label="caseStatusMeta[c.status].label" :tone="caseStatusMeta[c.status].tone" />
+              </div>
+              <p class="case-org">{{ c.org }}</p>
+              <p class="case-action">{{ c.action }}</p>
+              <p class="case-effect">成效：{{ c.effect }}</p>
+            </div>
+          </div>
+          <p v-else class="empty-text">暂无案例参考</p>
+        </div>
+
+        <div class="closer-sec">
+          <h3 class="sec-title">治理闭环</h3>
+          <p class="closer-desc">将当前主题一键纳入路线图，持续跟踪治理落地，形成「洞察 → 决策 → 治理」闭环。</p>
+          <div class="closer-row">
+            <select v-model="targetRoadmapId" class="closer-select" :disabled="creating" @focus="ensureRoadmap">
+              <option v-for="r in roadmapItems" :key="r.id" :value="r.id">{{ r.title }}</option>
+            </select>
+            <button type="button" class="btn primary" :disabled="creating || !targetRoadmapId" @click="createGovTask">
+              {{ creating ? '生成中…' : '一键生成治理任务' }}
+            </button>
+            <button v-if="createdMsg?.ok" type="button" class="btn ghost" @click="goRoadmap">前往路线图 →</button>
+          </div>
+          <p v-if="createdMsg" class="closer-msg" :class="createdMsg.ok ? 'msg-ok' : 'msg-err'">{{ createdMsg.text }}</p>
+        </div>
       </div>
       <p v-else class="empty-text">无主题数据</p>
     </section>
@@ -168,6 +267,8 @@ function select(id: string) {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-2);
+  max-height: 620px;
+  overflow-y: auto;
 }
 .topic {
   display: block;
@@ -314,6 +415,120 @@ function select(id: string) {
   font-size: var(--sf-font-12);
   color: var(--sf-text-faint);
 }
+.case-sec {
+  margin-top: var(--sf-space-4);
+}
+.case-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--sf-space-3);
+}
+.case-card {
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius);
+  padding: var(--sf-space-3);
+  background: var(--sf-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.case-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-2);
+}
+.case-name {
+  font-size: var(--sf-font-13);
+  font-weight: 600;
+}
+.case-org {
+  font-size: var(--sf-font-12);
+  color: var(--sf-primary);
+}
+.case-action {
+  margin: 0;
+  font-size: var(--sf-font-12);
+  color: var(--sf-text-secondary);
+  line-height: 1.5;
+}
+.case-effect {
+  margin: 0;
+  font-size: var(--sf-font-12);
+  color: var(--sf-success);
+}
+.closer-sec {
+  margin-top: var(--sf-space-5);
+  padding-top: var(--sf-space-4);
+  border-top: 1px solid var(--sf-border);
+}
+.closer-desc {
+  margin: 0 0 var(--sf-space-3);
+  font-size: var(--sf-font-12);
+  color: var(--sf-text-secondary);
+}
+.closer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-3);
+  flex-wrap: wrap;
+}
+.closer-select {
+  min-width: 240px;
+  padding: 7px 10px;
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: var(--sf-font-13);
+}
+.closer-msg {
+  margin: var(--sf-space-3) 0 0;
+  font-size: var(--sf-font-13);
+}
+.msg-ok {
+  color: var(--sf-success);
+}
+.msg-err {
+  color: var(--sf-danger);
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-sm);
+  background: var(--sf-surface);
+  color: var(--sf-text);
+  font-size: var(--sf-font-13);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+.btn:hover {
+  border-color: var(--sf-primary-border);
+}
+.btn.primary {
+  background: var(--sf-primary);
+  border-color: var(--sf-primary);
+  color: #fff;
+}
+.btn.primary:hover {
+  background: var(--sf-primary-light);
+  border-color: var(--sf-primary-light);
+}
+.btn.ghost {
+  background: transparent;
+  border-color: var(--sf-primary-border);
+  color: var(--sf-primary);
+}
+.btn.ghost:hover {
+  background: var(--sf-primary-soft);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 .empty-text {
   color: var(--sf-text-faint);
   font-size: var(--sf-font-13);
@@ -323,6 +538,9 @@ function select(id: string) {
     grid-template-columns: 1fr;
   }
   .grid2 {
+    grid-template-columns: 1fr;
+  }
+  .case-grid {
     grid-template-columns: 1fr;
   }
 }

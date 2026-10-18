@@ -112,5 +112,41 @@ def get_resource_overview(service=Depends(_service)) -> dict:
 
 @router.get("/health")
 def get_resource_health(service=Depends(_service)) -> dict:
-    """资源健康概况（总览驾驶舱展示用）。"""
-    return service.overall_health()
+    """资源健康概况（总览驾驶舱展示用），对齐前端 ResourceHealth 契约。
+
+    - db_status：全部 healthy -> healthy；含 error -> down；否则 degraded。
+    - error_rate：全部 API 的平均错误率（百分比，保留 1 位小数）。
+    - alert_count：当前告警总数。
+    """
+    servers = service._servers.list_all()
+    dbs = service._dbs.list_all()
+    endpoints = service._endpoints.list_all()
+    alerts = service.list_alerts(limit=50)
+
+    server_count = len(servers)
+    server_healthy = sum(1 for s in servers if s.status == "healthy")
+
+    db_statuses = {d.status for d in dbs}
+    if any(status == "error" for status in db_statuses):
+        db_status = "down"
+    elif any(status != "healthy" for status in db_statuses):
+        db_status = "degraded"
+    else:
+        db_status = "healthy"
+
+    api_total = len(endpoints)
+    api_healthy = sum(1 for e in endpoints if e.status == "healthy")
+    error_rate = round(sum(e.error_rate or 0 for e in endpoints) / api_total, 1) if api_total else 0.0
+
+    return {
+        "ok": True,
+        "server_count": server_count,
+        "server_healthy": server_healthy,
+        "db_status": db_status,
+        "db_connections": sum(d.connections or 0 for d in dbs),
+        "api_healthy": api_healthy,
+        "api_total": api_total,
+        "error_rate": error_rate,
+        "alert_count": len(alerts),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }

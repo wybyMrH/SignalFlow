@@ -250,7 +250,7 @@ const priorTone = (score: number) => (score >= 85 ? 'danger' : score >= 70 ? 'wa
         <div class="ops-main">{{ resource ? `${resource.server_healthy}/${resource.server_count}` : '—' }}</div>
         <div class="ops-label">服务节点健康</div>
         <div class="ops-meta">
-          <span>数据库 {{ resource?.db_status === 'healthy' ? '正常' : resource?.db_status ?? '—' }}</span>
+          <span>数据库 {{ resource ? (resource.db_status === 'healthy' ? '正常' : resource.db_status === 'degraded' ? '降级' : resource.db_status === 'down' ? '异常' : resource.db_status) : '—' }}</span>
           <span>API {{ resource ? `${resource.api_healthy}/${resource.api_total}` : '—' }}</span>
           <span v-if="resource?.alert_count">告警 {{ resource.alert_count }}</span>
           <span v-else>无告警</span>

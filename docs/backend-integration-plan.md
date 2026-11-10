@@ -13,28 +13,28 @@
 - **API 适配层**（`frontend/src/api/`）已与 mock 契约对齐；切换真实后端时仅需改环境变量 `VITE_USE_MOCK=false`，页面与 store 零改动。
 - **Store 守卫模式**已建立：`fetch(force = false)` 防止页面挂载覆盖用户操作，真实后端阶段同样适用。
 
-### 1.2 后端现状（v0.1.0）
+### 1.2 后端现状（v0.4.0+，2026-10-18 实测）
 
 | 模块 | 当前深度 | 说明 |
 |------|---------|------|
-| `app/core/` | 配置/日志/数据库会话骨架 | `config.py` 有 Pydantic Settings，`database.py` 有 `SessionLocal` |
-| `app/models/` | `feedback.py` 完整 ORM | 其他 domain 为占位或缺失 |
-| `app/schemas/` | `feedback.py` / `ai.py` 部分契约 | AI 契约与前端 mock 对齐，但缺少 gov/interviews/agents/resources/workflows 等 |
-| `app/repositories/` | `feedback.py` 基础 CRUD | 其他 domain 缺失 |
-| `app/services/` | `feedback.py` 业务层 | 其他 domain 缺失 |
-| `app/api/v1/` | `feedback.py` / `ai.py` / `health.py` 等 | `ai.py` 为 mock 实现；`gov` 路由未注册（404） |
-| `app/workflows/` | LangGraph 骨架 | 有 state/graph 目录，节点实现为空 |
-| `app/llm/` | LiteLLM 网关骨架 | 封装层未填充 |
-| `app/integrations/` | 空目录 | 渠道适配器扩展点预留 |
-| `alembic/` | 初始化迁移脚本 | 仅有 `env.py` 与版本目录，无实际 migration |
+| `app/core/` | 公共抽象层基本落地 | `config.py`（Pydantic Settings）/ `database.py`（SessionLocal）/ `exceptions.py` / `pagination.py` / `logging.py` / `cache.py`；**无 `security.py`（鉴权/RBAC 骨架仍未实现）** |
+| `app/models/` | 12+ domain ORM 完整 | 15 个模型文件（feedback/settings/dashboard/insights/interviews/agents/workflows/resources/gov/business/roadmap/automation 及 ai_/audit/user 等），Alembic 可建表 |
+| `app/schemas/` | 契约以 `ai.py` / `feedback.py` 为主 | 其余 domain 路由直接返回 dict，未全部 schema 化（字段与前端 mock 对齐） |
+| `app/repositories/` | 多 domain repository 完整 | 14 个 domain repository（feedback/gov/insight/interview/agent/workflow/resource/roadmap/setting/business/automation/ai_/user 等）+ `base.py` 基类 |
+| `app/services/` | 多 domain 业务层 | 15 个服务文件；`gov.py`（501 行）为真实实现（关键词分级+督办状态机+舆情预警，依赖 InsightService）；`ai.py`（842 行）automation/business DB 优先、无数据回退 mock，chat/reply/suggestion/auto_approve 为关键词模板 |
+| `app/api/v1/` | 12 个 router 全部注册 | health/settings/dashboard/feedbacks/insights/interviews/agents/workflows/resources/gov/roadmap/ai（13 个文件）；`/gov/overview` 与 `/ai/business/summary` 均已 curl 实测 200 |
+| `app/workflows/` | LangGraph 工作流实现 | state/graph/checkpoint + 5 节点（cluster/dedup/draft/eval/priority） |
+| `app/llm/` | 网关骨架完整未接入 | `gateway.py`（206 行）+ models/prompts/registry/cost_tracker 齐备；仅 workflows 节点惰性 import，未接入 `services/ai.py` |
+| `app/integrations/` | 适配器骨架已建 | `base.py` + `processor.py` + app_store/email/gov_hotline/im/ticket_system 5 个适配器目录（端到端接线待验证） |
+| `alembic/` | 5 个迁移版本 | 20261015_init、20261015_stage6_agents_tables、20261015_stage6_contract_ext、20261018_feedback_code、acf648a5708e_stage_1_domains |
 
-### 1.3 关键差距
+### 1.3 关键差距（2026-10-18 复评）
 
-1. **Domain 不完整**：gov、interviews、agents、resources、workflows、settings、dashboard、insights、roadmap、automation、business 等 domain 在后端几乎空白。
-2. **AI 工作流未落地**：LangGraph 节点为空，LiteLLM 网关未接入真实模型。
-3. **API 契约不对齐**：部分前端 mock 接口在后端无对应实现（如 `/gov/overview` 返回 404）。
-4. **缺少公共服务**：统一错误处理、分页封装、审计中间件、权限 RBAC 骨架。
-5. **渠道适配器未实现**：外部系统（工单/邮件/IM/政务热线）接入为空。
+1. **Domain 已补齐（已消除）**：12 domain 的 ORM/Repository/Service 已落地（models 15 文件、services 15 文件、repositories 14 个 domain + base）；gov/interviews/agents/resources/workflows/dashboard/insights/roadmap/business 等不再是空白。
+2. **AI 工作流部分落地（差距收窄）**：LangGraph 5 节点（cluster/dedup/draft/eval/priority）+ checkpoint 已实现；LiteLLM 网关骨架（`app/llm/`）完整但**尚未接入真实模型**——`app/services/ai.py` 的 chat/reply/suggestion/auto_approve 仍为关键词模板。
+3. **API 契约已对齐（已消除）**：12 个 router 全部注册；`/gov/overview` 实测 200；AI 端点（`/ai/automation-rules`、`/ai/reply-draft`、`/ai/automation/*`、`/ai/business/*` 等 17 个）与前端 `api/ai.ts` 一致。
+4. **公共服务（部分落地）**：core 已含 config/database/exceptions/pagination/logging/cache；**审计中间件与 RBAC 权限骨架未实现**（无 `core/security.py`，鉴权仍关闭）。
+5. **渠道适配器（骨架已建）**：`integrations/` 下 base.py + processor.py + app_store/email/gov_hotline/im/ticket_system 5 个适配器目录已建；端到端接线（外部数据→标准化事件→入库）待验证。
 
 ---
 
@@ -705,20 +705,20 @@ main        ← 稳定分支，只有阶段验收通过的代码可合并
 
 ## 附录 A：前端 Mock ↔ 后端 API 契约映射表（关键接口）
 
-| 前端页面 | 前端 Mock 函数 | 期望后端 Router | 当前状态 | 优先级 |
+| 前端页面 | 前端 Mock 函数 | 期望后端 Router | 当前状态（2026-10-18 复评） | 优先级 |
 |---------|---------------|----------------|---------|--------|
-| 总览 | `dashboardApi.getOverview()` | `GET /api/v1/dashboard/overview` | 前端 mock 已就绪，后端空白 | P0 |
-| 反馈列表 | `feedbackApi.list()` | `GET /api/v1/feedbacks` | 后端已有基础，需补全分页/筛选 | P0 |
-| 反馈详情 | `feedbackApi.getById(id)` | `GET /api/v1/feedbacks/{id}` | 后端已有基础 | P0 |
-| 洞察主题 | `insightsApi.getTopics()` | `GET /api/v1/insights/topics` | 前端 mock 已就绪，后端空白 | P0 |
-| 政务总览 | `govApi.getOverview()` | `GET /api/v1/gov/overview` | **404**，前后端均为空白 | P0 |
-| 访谈列表 | `interviewsApi.list()` | `GET /api/v1/interviews` | 前端 mock 已就绪，后端空白 | P1 |
-| 生成线索 | `interviewsApi.generateLead(id)` | `POST /api/v1/interviews/{id}/generate-lead` | 前端 mock 已就绪，后端空白 | P1 |
-| Agent 列表 | `agentsApi.list()` | `GET /api/v1/agents` | 前端 mock 已就绪，后端空白 | P1 |
-| 工作流列表 | `workflowsApi.list()` | `GET /api/v1/workflows` | 前端 mock 已就绪，后端空白 | P1 |
-| 资源健康 | `resourcesApi.getHealth()` | `GET /api/v1/resources/health` | 前端 mock 已就绪，后端空白 | P2 |
-| AI 规则 | `aiApi.getRules()` | `GET /api/v1/ai/rules` | 后端 mock 实现，需替换为真实 | P1 |
-| AI 生成回复 | `aiApi.generateReply(id)` | `POST /api/v1/ai/generate-reply` | 后端 mock 实现，需替换为真实 | P1 |
+| 总览 | `fetchDashboardMetrics()` | `GET /api/v1/dashboard/metrics` | 前端 mock 已就绪，后端已实现（dashboard router 注册） | P0 |
+| 反馈列表 | `feedbackApi.list()` | `GET /api/v1/feedbacks` | 后端已实现（分页/筛选可用，curl 200） | P0 |
+| 反馈详情 | `feedbackApi.getById(id)` | `GET /api/v1/feedbacks/{id}` | 后端已实现 | P0 |
+| 洞察主题 | `insightsApi.getTopics()` | `GET /api/v1/insights` | 后端已实现（insights router 注册） | P0 |
+| 政务总览 | `govApi.getOverview()` | `GET /api/v1/gov/overview` | 后端已实现（curl 200，见 current-state B-3） | P0 |
+| 访谈列表 | `interviewsApi.list()` | `GET /api/v1/interviews` | 后端已实现 | P1 |
+| 访谈提炼/线索 | `interviewsApi.generateLead(id)`（实际 `runInterviewExtraction(id)`） | `POST /api/v1/interviews/{id}/extract` | 后端已实现（AI 提炼入访谈详情） | P1 |
+| Agent 列表 | `agentsApi.list()` | `GET /api/v1/agents` | 后端已实现 | P1 |
+| 工作流列表 | `workflowsApi.list()` | `GET /api/v1/workflows` | 后端已实现 | P1 |
+| 资源健康 | `resourcesApi.getHealth()` | `GET /api/v1/resources/health` 与 `/resources/overview` | 后端已实现 | P2 |
+| AI 规则 | `aiApi.getRules()`（实际 `fetchAIAutomationRules()`） | `GET /api/v1/ai/automation-rules` | 后端已实现（规则数据）；真实 LLM 替换属下一阶段 | P1 |
+| AI 生成回复 | `aiApi.generateReply(id)`（实际 `generateAIReplyDraft(content)`） | `POST /api/v1/ai/reply-draft` | 后端已实现（关键词模板）；真实 LLM 替换属下一阶段 | P1 |
 
 ---
 
@@ -758,6 +758,6 @@ LOG_FORMAT=json              # json / text
 
 ---
 
-*文档版本：v0.1.0*  
-*最后更新：2026-10-15*  
-*下一评审点：阶段 0 完成后（预计 1 周）*
+*文档版本：v0.4.0+*  
+*最后更新：2026-10-18*  
+*下一评审点：阶段 3 完成后（真实 LLM 接入与政务知识库对接，见 `docs/next-stage-plan.md`）*

@@ -1,6 +1,6 @@
 # 下一阶段计划
 
-文档就绪度：confirmed（前端 mock 全流程切片 + AI 总览/反馈 AI 化 + AI Mock 后端骨架 + 2026-10-15 反馈 UI 与统计卡/气泡助手重构/AI 自动化/商务洞察/政务统计扩展 + 2026-10-15 二次运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置/闭环联动与 store 守卫修复）均已闭环，当前进入「真实 LLM 接入与政务知识库对接、后端政务契约补齐」）
+文档就绪度：confirmed（前端 mock 全流程切片 + AI 总览/反馈 AI 化 + AI Mock 后端骨架 + 2026-10-15 反馈 UI 与统计卡/气泡助手重构/AI 自动化/商务洞察/政务统计扩展 + 2026-10-15 二次运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置/闭环联动与 store 守卫修复）+ 2026-10-18 后端分层架构落地（Stage-0~3）与 gov 政务契约实现注册、双模式联调（8088 mock / 5199 真后端）均已闭环，当前进入「真实 LLM 接入与政务知识库对接」）
 
 ## 上一阶段回执（2026-10-14 前端 mock 全流程切片 + AI 功能）
 
@@ -13,7 +13,7 @@
 
 - **已完成（E-1~E-5）**：① 反馈管理页 UI 与统计卡修复——列表行距/密度调整、顶部状态统计卡（待解决/AI 已生成/AI 已自动回复/已解决）、左侧导航条加宽消除换行；② 详情抽屉与气泡助手重构——抽屉展示回复内容、非 AI 审批场景 AI 草稿可编辑；气泡助手按 image(4) 参考重构为完整 AI 助手面板（欢迎页/功能分类快捷入口/历史会话/Agent-Chat 模式切换/免责声明），支持单条意见回复建议与自由聊天；③ AI 自动化流程——自动分类、自动去重合并相似反馈、自动优先级升降级规则配置与执行面板；④ 商务合作信息 AI 提炼——企业线索/行业分布/市场动向/共性需求四面板 + 顶部统计卡，实现产品规划「推销联动」切片；⑤ 政务统计扩展——GovPage 全量重写为 6 顶部统计卡 + 报告元信息 + 7 标签面板（诉求分级/督办事项/区域分布/热点主题/舆情预警/政策告知/审计留痕），舆情四级自绘徽章（StatusBadge 无 orange）；侧边栏按需新增入口并统一样式，SfIcon 补 map/megaphone path。
 - **验证证据（2026-10-15）**：`npm run type-check` 通过；`npm run build` 通过（约 3.09s）；Docker compose 四容器（postgres(pgvector)/redis/backend/frontend）重建后全部 healthy，前端 http://localhost:8088（本机 8080 被 edunash-nginx 占用故 .env 设 FRONTEND_PORT=8088，`deploy/.env` 不入库）；后端健康路由经 `curl http://localhost:8000/api/v1/healthz` 确认（裸 /healthz 为过时文档，已同步修正）；容器版 /gov 走查通过（7 标签逐项 eval 核验 + 四级预警徽章 class 绑定正确）；政务页动态验证细节见 `docs/current-state.md` 动态验证证据表。
-- **边界确认**：后端 `router.py` 尚未注册 gov 路由（`curl /api/v1/gov/overview` 404）；mock 模式前端不依赖真实接口，真实 `/gov/overview` 契约列入下一阶段。
+- **边界确认（2026-10-15 时点）**：后端 `router.py` 当时尚未注册 gov 路由（`curl /api/v1/gov/overview` 404）；mock 模式前端不依赖真实接口。**该结论已过时**——2026-10-18 后端分层落地后，gov 路由已注册并实测返回 200（详见 `docs/current-state.md` 后端落地与双模式联调阶段章节）。
 
 ## 运营驾驶舱扩展收尾（2026-10-15 二次增补）
 
@@ -23,8 +23,8 @@
 
 ## 选定切片
 
-- 需求与可观察结果：**① 真实 LLM 接入**——用 LiteLLM 统一网关接入可用大模型（本地/云端均可，先 mock-able 配置），替换 `backend/app/services/ai.py` 中 reply 生成与对话总结的 mock 实现为真实调用；**② 政务知识库对接**——建立 mock 本地政策知识库 + RAG 检索链路（向量化 + 检索 + 上下文注入），使 AI 回复/建议基于知识库内容生成并标注来源；**③ 前端演示开关**——`VITE_USE_MOCK=false` 时前端真实调用后端 AI 接口，Docker compose 中 frontend+backend 同时可访问；**④ 后端政务契约补齐**——按 `frontend/src/types/index.ts` 与 `frontend/src/mocks/gov.ts` 定义实现 `backend` 的 `/api/v1/gov/overview`（诉求分级/督办/区域分布/热点主题/舆情预警/政策告知/审计留痕），替换前端 mock 分支。
-- 当前行为 → 目标行为：当前 AI 与政务功能完全由前端 mock 与后端 mock 服务驱动；目标为同一套 UI/契约下由真实 LLM + 知识库检索生成回复与总结，政务统计由真实后端接口提供，产品可演示「AI 参与决策」的真实效果。
+- 需求与可观察结果：**① 真实 LLM 接入**——用 LiteLLM 统一网关接入可用大模型（本地/云端均可，先 mock-able 配置），替换 `backend/app/services/ai.py` 中 reply 生成与对话总结的 mock 实现为真实调用；**② 政务知识库对接**——建立 mock 本地政策知识库 + RAG 检索链路（向量化 + 检索 + 上下文注入），使 AI 回复/建议基于知识库内容生成并标注来源；**③ 前端演示开关**——`VITE_USE_MOCK=false` 时前端真实调用后端 AI 接口，Docker compose 中 frontend+backend 同时可访问；**④ 后端政务契约补齐（已完成，2026-10-18）**——按 `frontend/src/types/index.ts` 与 `frontend/src/mocks/gov.ts` 定义实现 `backend` 的 `/api/v1/gov/overview`（诉求分级/督办/区域分布/热点主题/舆情预警/政策告知/审计留痕），已注册进 `router.py` 并实测返回 200，替换前端 mock 分支。
+- 当前行为 → 目标行为：政务统计已由真实后端接口提供（切片④已完成，`/api/v1/gov/overview` 实测 200），但 AI 对话与回复生成（chat/reply/suggestion/auto_approve）仍由前端 mock 与后端关键词模板驱动；目标为同一套 UI/契约下由真实 LLM + 知识库检索生成回复与总结，产品可演示「AI 参与决策」的真实效果。
 - 拥有边界、必要组件与排除项：`backend/app/services/ai.py`（真实实现替换）、`backend/app/services/knowledge.py`（知识库检索 mock/RAG 骨架）、`backend/app/workflows/`（LangGraph 工作流编排）、`backend/pyproject.toml`（litellm/向量库依赖）、`backend/app/api/v1/gov.py`（政务契约实现，注册进 `router.py`）；排除真实政务数据库对接（先以本地 mock 政策文档作为知识库源）、真实渠道接入、登录鉴权（仍以演示环境处理）。
 - 前置条件与交接契约：前端 `api/ai.ts` 与后端契约保持 A-6 已定义 7 接口不变；输出格式（回复文本/建议/来源标注）与前端 `types/index.ts` 对齐；`VITE_USE_MOCK` 切换文档沿用。
 - 为什么这是优先级与合适阶段大小：AI 是产品差异化的核心，真实 LLM + 知识库是「AI 参与面板」与「AI 自动回复」从演示走向可用的关键；边界可独立验证（curl 后端 AI 接口 + 前端真实数据渲染）。

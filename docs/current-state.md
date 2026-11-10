@@ -1,13 +1,13 @@
 # 当前状态记录
 
-文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架 + 反馈 UI 与统计卡修复/详情抽屉与气泡助手重构/AI 自动化流程/商务洞察/政务统计扩展 + 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置）与 store 守卫集成修复）
+文档就绪度：已评审范围（reviewed scope：工程骨架 + 前端 mock 数据层与入口 + 业务页面切片实现与浏览器验收 + 配色与全屏排版适配 + Docker 容器化展示验证 + AI 总览面板与反馈管理 AI 化 + AI Mock 后端工作流骨架 + 反馈 UI 与统计卡修复/详情抽屉与气泡助手重构/AI 自动化流程/商务洞察/政务统计扩展 + 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置）与 store 守卫集成修复 + 后端分层架构落地（Stage-0~3：core 公共抽象层 / 12 Domain ORM+Repository+Service / LiteLLM 网关与 LangGraph 工作流 / 渠道适配器 / Alembic 迁移 / 演示种子数据）+ gov 政务契约实现并注册 + 8088(mock)/5199(真后端) 双模式一致性对齐）
 
 ## 评审范围
 
-- 需求或任务：在 E:\code\interview\SignalFlow 搭建 SignalFlow 客户反馈决策工具的工程骨架（已完成）；随后按用户要求进入**前端阶段——用模拟数据把前端从入口按业务需求与功能切片推进，先以文档落盘计划/需求/技术参考，再实现可演示闭环**（本记录当前聚焦前端阶段）。
+- 需求或任务：在 E:\code\interview\SignalFlow 搭建 SignalFlow 客户反馈决策工具的工程骨架（已完成）；随后按用户要求进入**前端阶段——用模拟数据把前端从入口按业务需求与功能切片推进，先以文档落盘计划/需求/技术参考，再实现可演示闭环**，并于 2026-10-18 进入**后端落地阶段——后端分层架构（Stage-0~3）与双模式联调**（本记录覆盖前端阶段与后端落地阶段，前端阶段为主体，后端部分见「后端落地与双模式联调阶段当前项」）。
 - 评审日期：2026-10-15
-- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据；E-1~E-5 扩展功能（反馈统计卡/详情抽屉与气泡助手重构/AI 自动化/商务洞察/政务统计扩展）实现与浏览器验收证据；O-1~O-6 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置/集成闭环联动）实现与浏览器验收证据。
-- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架，以及 2026-10-15 增补的反馈 UI 与统计卡修复、详情抽屉与气泡助手重构、AI 自动化流程、商务合作信息提炼与政务统计扩展，以及 2026-10-15 二次增补的运营驾驶舱扩展（总览信息块与客户访谈、Agent 配置中心、资源管理、LangGraph 工作流配置、三向闭环联动与 store 守卫修复）；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供；真实后端 `/gov/overview` 契约亦属后续阶段）。
+- 证据边界：项目目录文件结构、依赖声明、配置骨架与文档模板；前端阶段新增 `docs/frontend-development-plan.md`（计划与设计规范源）、`docs/adrs/ADR-0002-前端mock先行与轻量设计体系.md`（决策记录）；mock 数据层、API 适配层、stores、入口应用壳与路由；FS-1~FS-7 全部页面切片实现与浏览器验收证据；E-1~E-5 扩展功能（反馈统计卡/详情抽屉与气泡助手重构/AI 自动化/商务洞察/政务统计扩展）实现与浏览器验收证据；O-1~O-6 运营驾驶舱扩展（总览信息块/客户访谈/Agent 配置/资源管理/工作流配置/集成闭环联动）实现与浏览器验收证据；B-1~B-8 后端分层落地与双模式联调的静态/动态证据（backend/app 目录扫描、git log 提交链、router.py 注册核对、容器 curl 实测与 pytest 离线子集）。
+- 覆盖限制：本记录覆盖骨架验证、前端规划文档、mock 入口打通与 FS-1~FS-7 页面实现、配色与全屏排版适配、Docker 容器化展示验证、AI 总览面板重构、反馈管理 AI 化（AI 回复/自动审批/气泡助手）与 AI Mock 后端工作流骨架，以及 2026-10-15 增补的反馈 UI 与统计卡修复、详情抽屉与气泡助手重构、AI 自动化流程、商务合作信息提炼与政务统计扩展，以及 2026-10-15 二次增补的运营驾驶舱扩展（总览信息块与客户访谈、Agent 配置中心、资源管理、LangGraph 工作流配置、三向闭环联动与 store 守卫修复），以及 2026-10-18 增补的后端分层架构落地（Stage-0~3）与 gov 政务契约实现注册、8088(mock)/5199(真后端) 双模式一致性对齐；尚未接入真实 LLM 与政务知识库（mock 模式下前端不依赖后端服务，AI 能力由前端 mock 工作流与后端 mock 服务层提供；后端已注册 12 个 router 并可真实返回数据，`services/ai.py` 的 chat/reply/suggestion/auto_approve 仍为关键词模板实现，政务知识库 RAG 未创建）。
 
 ## 骨架阶段已关闭项（沿用首次评审）
 
@@ -66,7 +66,20 @@
 | O-5 | LangGraph 工作流配置入口与闭环联动 | `frontend/src/pages/workflows/WorkflowConfigPage.vue`（新增）、`frontend/src/mocks/workflows.ts`、`frontend/src/api/workflows.ts`、`frontend/src/stores/workflows.ts` | 已实现 | 侧边栏新增「工作流配置」页：5 个预置模板（发布公告/商单自动回复/自动分类与去重/舆情监测与应急/多源诉求聚合解决），每卡片含描述/触发条件/LangGraph 节点流程图（开始→…→结束）/Agent 绑定/工具链/运行历史/状态开关；总览「启用全部工作流」开关真实映射工作流启用状态 | 动态（浏览器闭环验证 + type-check/build） | 编排可见可管 | 保持 | 已关闭 |
 | O-6 | 集成闭环联动与 store 守卫修复 | `frontend/src/stores/{workflows,agents,interviews}.ts`、`frontend/src/stores/ai.ts`（6 个 fetch 方法） | 已实现 | 修复页面 onMounted 无条件 fetch 覆盖用户配置的缺陷：给 4 个 store 的 9 个 fetch 方法加 `force=false` 守卫（已有数据跳过重取）；「总览开关→工作流配置页」状态镜像闭环（4/5→5/5 并保持）；「访谈→商务线索」联动闭环（IV-002 生成 BL-007 并置顶商务页线索池顶部） | 动态（SPA 内导航整链路验收 + type-check/build） | 会话内状态一致性 | 保持 | 已关闭 |
 
-## 动态验证证据（前端页面切片验收 2026-10-14 首轮 + 2026-10-15 增补）
+## 后端落地与双模式联调阶段当前项（2026-10-18 增补）
+
+| ID | 需求或契约点 | 文件/模块/边界 | 分类 | 观察行为 | 证据等级 | 影响 | 建议处理 | 状态 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| B-1 | 后端分层架构落地（Stage-0~3） | `backend/app/{core,models,repositories,services,api/v1,workflows,llm,integrations,seed.py}` | 已实现 | core 公共抽象层（config/database/exceptions/pagination/logging/cache）+ 12 Domain ORM+Repository+Service + LangGraph 工作流 + LiteLLM 网关骨架 + 渠道适配器 + Alembic 迁移 + seed 种子数据全部就位；git log 关键提交 0a8dd50(stage-0)→96eaf25(stage-1)→4a947b1(stage-2)→37c5da0(stage-3)→6d05040~3a237ec(双模式联调) | 静态+动态（目录扫描 + git log + 测试） | 后端真实服务可独立运行 | 保持 | 已关闭 |
+| B-2 | 12 个 router 注册与契约对齐 | `backend/app/api/v1/router.py`、`backend/app/api/v1/`（13 文件） | 已实现 | health(`/api/v1/healthz`)/settings/dashboard/feedbacks/insights/interviews/agents（无前缀）/workflows/resources/gov/roadmap/ai 全部注册；路由前缀与前端 `http.ts` baseURL `/api/v1` 一致 | 静态（router.py 核对）+ 动态（curl 实测） | 前端 `VITE_USE_MOCK=false` 可真实对接 | 保持 | 已关闭 |
+| B-3 | gov 政务契约实现并注册 | `backend/app/api/v1/gov.py`、`backend/app/services/gov.py`（501 行）、`backend/app/repositories/gov.py`、`backend/app/models/` | 已实现 | `/api/v1/gov/overview` 实测 200：真实聚合 period + summary{total_count:48, weekly_new:8} + classifications A-D；实现含关键词分级+督办状态机+舆情预警阈值，依赖 InsightService | 动态（容器内 curl 实测） | 政务演示闭环数据真实化 | 保持 | 已关闭 |
+| B-4 | 后端 AI 服务现状 | `backend/app/services/ai.py`（842 行） | 已实现（部分 mock） | automation 与 business 方法 DB 优先、无数据回退 mock；chat/workflows/reply/suggestion/auto_approve 仍为关键词模板（`_generate` 未接真实模型）；17 个 AI 端点与前端 `api/ai.ts` 契约一致（`/ai/workflows`、`/ai/automation-rules`、`/ai/chat`、`/ai/reply-draft`、`/ai/automation/*`、`/ai/business/*` 等） | 静态+动态（代码核对 + curl `/ai/business/summary` 200） | 真实 LLM 接入的替换点明确 | 下一阶段替换 `_generate` 为真实模型调用 | 已关闭（当前项验收） |
+| B-5 | LLM 网关骨架 | `backend/app/llm/`（gateway.py 206 行 + models/prompts/registry/cost_tracker） | 已实现（未接入） | 网关/模型注册表/成本跟踪骨架完整；仅 workflows 节点惰性 import，未接入 `services/ai.py` | 静态（代码核对） | 真实 LLM 接入前置 | 下一阶段接入 | 已关闭（当前项验收） |
+| B-6 | LangGraph 工作流 | `backend/app/workflows/`（state/graph/checkpoint + 5 节点 cluster/dedup/draft/eval/priority） | 已实现 | 反馈分析工作流拓扑与节点实现就位；checkpoint 持久化用例依赖 PostgreSQL 5433（本机容器在 5432，未纳入本机验收） | 动态（离线子集 pytest 37 passed / 1 failed 需 PG） | AI 编排可运行 | 保持 | 已关闭 |
+| B-7 | 渠道适配器骨架 | `backend/app/integrations/`（base.py + processor.py + app_store/email/gov_hotline/im/ticket_system） | 已实现（骨架） | 适配器目录与抽象基类/处理器就位，端到端接线（外部数据→标准化事件→入库）待验证 | 静态（目录与文件核对） | 多源接入扩展点 | 保持 | 已关闭 |
+| B-8 | 迁移与种子数据 | `backend/alembic/versions/`（5 个版本）、`backend/app/seed.py` | 已实现 | 20261015_init、20261015_stage6_agents_tables、20261015_stage6_contract_ext、20261018_feedback_code、acf648a5708e_stage_1_domains；seed.py 将前端 mock 映射为 ORM 种子（主键/唯一键幂等去重），容器实测反馈数据带真实 UUID 与 tenant_id:"demo-ent" | 静态+动态（迁移文件核对 + curl `/feedbacks?page=1&size=1` 200） | 演示数据可落库 | 保持 | 已关闭 |
+
+## 动态验证证据（前端页面切片验收 2026-10-14 首轮 + 2026-10-15 增补 + 2026-10-18 后端联调补录）
 
 | 检查项 | 命令/方式 | 结果 |
 | --- | --- | --- |
@@ -103,7 +116,7 @@
 | 扩展功能生产构建 | `npm run build`（frontend） | 通过（vue-tsc --noEmit + vite build，约 3.09s，产物 dist/assets 正常） |
 | 扩展功能 Docker 集成（position 6） | `docker compose up -d --build`（FRONTEND_PORT=8088，因本机 8080 被 edunash-nginx 占用） | 四容器（postgres(pgvector)/redis/backend/frontend）全部 healthy；后端健康路由经 `curl http://localhost:8000/api/v1/healthz` 返回 `{"status":"ok","service":"signalflow-backend"}`；容器版 http://localhost:8088/gov 走查通过（6 统计卡 + 7 标签 + 四级预警徽章）；前端容器内全流程可操作 |
 | 后端健康路由确认（position 6） | `curl http://localhost:8000/healthz` vs `/api/v1/healthz` | 裸 `/healthz` 返回 404；实际健康路由为 `/api/v1/healthz`（`backend/app/api/v1/health.py`），compose 与 deploy/README 中过时注释已同步修正 |
-| 后端 gov 契约边界确认（position 6） | `curl http://localhost:8000/api/v1/gov/overview` | 返回 404（backend `router.py` 仅注册 health/feedbacks/insights/ai，未注册 gov 路由）；当前 mock 模式前端不依赖真实接口，真实 `/gov/overview` 契约列入下一阶段 |
+| 后端 gov 契约边界确认（position 6，2026-10-15 时点） | `curl http://localhost:8000/api/v1/gov/overview` | 当时返回 404（backend `router.py` 仅注册 health/feedbacks/insights/ai）；**该结论已过时**——2026-10-18 后端分层落地后 gov 路由已注册并实测 200，见上「后端落地与双模式联调阶段当前项」B-3 与本节末尾 2026-10-18 新证据 |
 | 运营驾驶舱 type-check（O-1~O-6） | `npm run type-check`（frontend） | 通过（vue-tsc --noEmit，新增 agents/interviews/resources/workflows 页面与 store 后无类型错误） |
 | 运营驾驶舱生产构建（O-1~O-6） | `npm run build`（frontend） | 通过（vue-tsc --noEmit + vite build，`✓ built in 2.27s`，产物 dist/assets 正常） |
 | 详情抽屉回复可见性（O-1） | /feedback 打开多条详情抽屉 | 已回复条目展示完整回复文本与发送人/时间；AI 审核中条目展示 AI 草稿；AI 草稿文本域高度调高（min-height 约 160-200px），按钮区不拥挤 |
@@ -116,6 +129,9 @@
 | 工作流配置页（O-5） | /workflows 浏览器验收 | 5 个预置模板（发布公告/商单自动回复/自动分类与去重/舆情监测与应急/多源诉求聚合解决），每卡片含描述/触发条件/节点流程图（开始→…→结束）/Agent 绑定/工具链/运行历史/状态开关 |
 | 总览开关→工作流状态镜像（O-6） | 整页刷新 `/` → 点总览「启用全部工作流」→ SPA 点侧栏 `/workflows` | 初始 4/5 → 点击总览开关变 5/5 → SPA 导航工作流页后「多源诉求聚合解决」从「已停用」保持「已启用」，状态镜像一致（store 守卫防覆盖生效） |
 | 访谈→商务线索联动（O-6） | 整页刷新 `/` → SPA `/interview` → 选 IV-002 → 「生成商务线索并汇入线索池」→ SPA `/business` | 访谈页显示「已生成商务线索 BL-007」；商务页「企业合作线索」列表顶部置顶出现 BL-007（中科软联/私有化与数据不出域诉求，客户价值 85、置信度 85%、带访谈来源引用，状态-待确认） |
+| 后端分层落地确认（B 阶段） | 目录扫描 + git log + router 核对 | backend/app 分层目录与 13 个 api/v1 文件、models 15、services 15、repositories 14+1、workflows 5 节点、llm 骨架、integrations 5 适配器齐备；git log 关键提交 0a8dd50(stage-0)→96eaf25(stage-1)→4a947b1(stage-2)→37c5da0(stage-3)→6d05040~3a237ec(双模式联调)→8bde419(演示时间轴+截图)→a3c9302(license)；`router.py` 注册 health/settings/dashboard/feedbacks/insights/interviews/agents/workflows/resources/gov/roadmap/ai 12 个 router |
+| 后端容器态（2026-10-18） | `curl` 四接口实测 | `/api/v1/healthz` → 200；`/api/v1/gov/overview` → 200（真实聚合 period + summary{total_count:48, weekly_new:8} + classifications A-D）；`/api/v1/ai/business/summary` → 200（DB：total_leads:4/qualified:1/pushed:2）；`/api/v1/feedbacks?page=1&size=1` → 200（真实 UUID + tenant_id:"demo-ent"） |
+| 后端测试（2026-10-18） | `pytest --collect-only` + 离线子集 | 全量 198 用例（17 文件）；离线子集（test_workflow_nodes/graph/llm_gateway/llm_registry_cost）37 passed / 1 failed（checkpoint 持久化用例需 PostgreSQL 5433，本机容器在 5432，不纳入本机验收） |
 
 ### 重要结论：草稿回传「未回写」疑点澄清
 
@@ -128,17 +144,17 @@
 
 1. **用户或系统需要什么**：前端以模拟数据跑通全流程闭环，页面紧凑、信息密度合理、突出"反馈→洞察→决策→行动"的产品理念；总览面板需要由 AI 参与——既有传统数据展示，也有 AI 对话（预设工作语句 + 自由聊天）、AI 处理中信息/工作流状态展示与自动化规则配置；反馈管理需要引入 AI 回复生成、自动审批与气泡助手；2026-10-15 进一步要求：反馈页行距与统计卡、气泡助手按参考图重构、详情抽屉展示回复且 AI 草稿可改、按优先级分阶段开发（UI 走查 → 气泡助手 → AI 自动化 → 商务洞察 → 政务扩展）；随后要求把总览扩展为全局运营驾驶舱（自动化/线索/预警/Agent/工作流/资源健康）、新增客户访谈与商务联动、建立 Agent/Skill 配置中心与资源管理入口、提供 LangGraph 工作流配置入口并保证各功能闭环联动。
 2. **现在发生了什么**：前端全流程计划、功能切片与设计规范已落盘（MD），ADR-0002 已记录 mock 先行决策；mock 数据层、API 适配、stores、FS-0 应用壳与 FS-1~FS-7 全部页面已实现；AI 总览面板重构（对话栏/工作流状态/自动化规则）、反馈管理 AI 化（AI 生成回复/自动审批/气泡助手/AI 状态流转）、AI Mock 后端工作流骨架（7 接口契约与前端对齐）已完成；2026-10-15 增补完成反馈统计卡与行距/导航修复、详情抽屉回复展示与 AI 草稿可改、气泡助手完整面板重构（欢迎页/快捷入口/历史会话/模式切换/免责声明）、AI 自动化流程（分类/去重合并/优先级规则）、商务洞察（线索/行业/动向/共性需求四面板）与政务统计扩展（6 统计卡 + 7 标签 + 四级预警）；2026-10-15 二次增补完成运营驾驶舱扩展（详情抽屉回复可见性与 AI 草稿区调高、气泡助手全页面推广与总览 AI 助手重设计、总览信息块与客户访谈接入、Agent 配置中心与资源管理入口、LangGraph 工作流配置入口与三向闭环联动）并修复 mock 阶段 store 覆盖缺陷（4 store 9 个 fetch 方法加 force 守卫）；`npm run type-check` + `npm run build` 通过，Docker compose 四容器 healthy（前端 8088）。
-3. **应该发生什么**：全部新增功能由 mock 数据驱动，前端可独立演示（不依赖真实后端）；验收与演示必须使用 SPA 内导航而非整页刷新（整页刷新会重置 mock 内存态）；真实后端 gov 契约（`/gov/overview`）与真实 LLM 接入、政务知识库对接属于下一阶段（见 `docs/next-stage-plan.md`）。
+3. **应该发生什么**：全部前端功能由 mock 数据驱动，前端可独立演示（不依赖真实后端）；验收与演示必须使用 SPA 内导航而非整页刷新（整页刷新会重置 mock 内存态）；2026-10-18 后端分层落地后 gov 契约（`/gov/overview`）已实现注册并实测返回 200，仅真实 LLM 接入与政务知识库对接仍属下一阶段（见 `docs/next-stage-plan.md`）。
 4. **为什么差异重要**：统计卡让「待办/逾期/办结率」一眼可见；气泡助手与抽屉改造使 AI 草稿可人工干预，符合政企「AI 辅助 + 人工兜底」原则；AI 自动化与商务/政务扩展覆盖产品规划的推销联动与政务场景，增强演示完整性；运营驾驶舱把自动化、线索、预警、Agent/工作流/资源健康统一到总览，配合工作流配置与访谈→线索联动形成「配置→执行→回显」闭环，演示叙事更完整；store 守卫修复保证会话内用户操作不被页面挂载重取覆盖，是 mock 阶段状态一致性的关键；mock 适配层保证后续接真实 LLM/知识库零改动。
-5. **证据与受影响边界**：FS-1~FS-7 与 E-1~E-5 及 O-1~O-6 全部页面交互闭环均有浏览器证据；type-check/build/容器部署（8088）通过；mock 阶段已知限制：整页刷新会重置 Pinia store 内存态，验收/演示须用 SPA 内导航；后端 AI 服务当前为 mock 实现，真实 LLM、政务知识库与后端 `/gov/overview` 合约未实施。
-6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流）、政务知识库对接（RAG 检索）与后端政务接口契约补齐，替换 mock 服务实现；本阶段成果已提交并推送至私有 GitHub 仓库。
+5. **证据与受影响边界**：FS-1~FS-7 与 E-1~E-5 及 O-1~O-6 全部页面交互闭环均有浏览器证据；type-check/build/容器部署（8088）通过；mock 阶段已知限制：整页刷新会重置 Pinia store 内存态，验收/演示须用 SPA 内导航；后端 AI 服务当前为 mock/关键词模板实现（automation/business 为 DB 优先、无数据回退 mock），真实 LLM 与政务知识库 RAG 尚未落地（gov 契约已实现注册并可真实返回）。
+6. **建议的下一步（不声称已完成）**：进入下一阶段——真实 LLM 接入（LiteLLM 统一网关 + LangGraph 工作流，替换 `services/ai.py` 的关键词模板 `_generate`）与政务知识库对接（RAG 检索）；本阶段成果已提交并推送至公开 GitHub 仓库（wybymrH/SignalFlow，HEAD=a3c9302）。
 
 ## 评审覆盖与关闭标准
 
-- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证 + E-1~E-5 扩展功能（反馈 UI 与统计卡/详情抽屉与气泡助手/AI 自动化/商务洞察/政务统计扩展）的浏览器验收与 type-check/build/Docker 集成验证 + O-1~O-6 运营驾驶舱扩展（详情抽屉回复可见性/气泡助手全页面/总览信息块与客户访谈/Agent 配置/资源管理/工作流配置/集成闭环与 store 守卫）的浏览器验收与 type-check/build 验证。
-- 未检查的文件或边界：真实 LLM 接入与政务知识库对接（下一阶段）、后端 AI mock 服务在真实 FastAPI 运行时的手工 curl 验证（后端依赖未安装，契约以静态核对为准）、后端 `/gov/overview` 真实接口（未注册，属下一阶段契约补齐）。
+- 已评审文件/模块与深度：工程骨架目录与配置（首轮）+ 前端规划文档、ADR-0002 的内容完整性与流程符合度 + mock 数据层/API 适配/stores/应用壳/路由 + FS-1~FS-7 全部页面实现的浏览器可见验收 + AI 总览面板/反馈管理 AI 化/后端 AI mock 契约（A-1~A-7）的浏览器验收与 type-check/build/容器部署验证 + E-1~E-5 扩展功能（反馈 UI 与统计卡/详情抽屉与气泡助手/AI 自动化/商务洞察/政务统计扩展）的浏览器验收与 type-check/build/Docker 集成验证 + O-1~O-6 运营驾驶舱扩展（详情抽屉回复可见性/气泡助手全页面/总览信息块与客户访谈/Agent 配置/资源管理/工作流配置/集成闭环与 store 守卫）的浏览器验收与 type-check/build 验证 + B-1~B-8 后端分层落地与双模式联调的静态/动态验证（目录扫描、git log、router 核对与容器 curl 实测）。
+- 未检查的文件或边界：真实 LLM 接入与政务知识库 RAG（下一阶段，`services/ai.py` 的 chat/reply/suggestion/auto_approve 仍为关键词模板）；后端 AI mock 服务运行时行为已部分以 curl 验证（`/ai/business/summary` 200），其余 AI 端点仍以静态核对为准；gov 契约已注册并通过 curl 验证（不再属未检查边界）。
 - 关闭前端规划项所需证据：切片实现完成后的浏览器可见验收（`docs/frontend-development-plan.md` §3.3）；文档本身的"已落盘"证据为文件存在与内容核对。
-- 最后检查版本或日期：2026-10-15。
+- 最后检查版本或日期：2026-10-18。
 
 ## 删除或合并候选
 

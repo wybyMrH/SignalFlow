@@ -10,7 +10,7 @@ cp .env.example .env        # 按需修改数据库口令、端口与 LLM 密钥
 docker compose up -d --build
 ```
 
-- 前端：http://localhost:8080 （`/api` 由 Nginx 反代到后端）
+- 前端：http://localhost:8088 （纯 mock 数据，无需后端即可演示；`/api` 由 Nginx 反代到后端）
 - 后端健康检查：http://localhost:8000/api/v1/healthz
 - 停止：`docker compose down`（数据卷保留）
 - 清空数据：`docker compose down -v`
